@@ -1,0 +1,61 @@
+version: '3'
+services:
+  cassandra-0:
+    image: gcr.io/arcus-238802/arcus/cassandra:latest
+    environment:
+    - CASSANDRA_SEEDS=cassandra-0
+    ports:
+    - 7000
+    - 7001
+    - 7199
+    - 9042
+    - 9160
+    volumes:
+    - cassandra-storage-0:/data
+    deploy:
+      restart_policy:
+        condition: always
+        delay: 5s
+        max_attempts: 5
+        window: 120s
+  cassandra-1:
+    image: gcr.io/arcus-238802/arcus/cassandra:latest
+    environment:
+    - CASSANDRA_SEEDS=cassandra-0
+    ports:
+    - 7000
+    - 7001
+    - 7199
+    - 9042
+    - 9160
+    volumes:
+    - cassandra-storage-1:/data
+    deploy:
+      restart_policy:
+        condition: always
+        delay: 5s
+        max_attempts: 5
+        window: 120s
+  cassandra-2:
+    image: gcr.io/arcus-238802/arcus/cassandra:latest
+    environment:
+    - CASSANDRA_SEEDS=cassandra-0
+    ports:
+    - 7000
+    - 7001
+    - 7199
+    - 9042
+    - 9160
+    volumes:
+    - cassandra-storage-2:/data
+    deploy:
+      restart_policy:
+        condition: always
+        delay: 5s
+        max_attempts: 5
+        window: 120s
+
+volumes:
+  cassandra-storage-0:
+  cassandra-storage-1:
+  cassandra-storage-2:
