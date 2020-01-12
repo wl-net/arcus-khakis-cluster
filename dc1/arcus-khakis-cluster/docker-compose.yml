@@ -18,7 +18,7 @@ services:
     - cassandra-storage-0:/data
     networks:
       arcus:
-        ipv4_address: 192.168.0.10
+        ipv4_address: 192.168.1.10
     deploy:
       restart_policy:
         condition: always
@@ -43,7 +43,7 @@ services:
     - cassandra-storage-1:/data
     networks:
       arcus:
-        ipv4_address: 192.168.0.11
+        ipv4_address: 192.168.1.11
     deploy:
       restart_policy:
         condition: always
@@ -68,7 +68,7 @@ services:
     - cassandra-storage-2:/data
     networks:
       arcus:
-        ipv4_address: 192.168.0.12
+        ipv4_address: 192.168.1.12
     deploy:
       restart_policy:
         condition: always
@@ -89,4 +89,4 @@ networks:
       parent: br0
     ipam:
       config:
-      - subnet: 192.168.0.1/24
+      - subnet: 192.168.1.1/24
