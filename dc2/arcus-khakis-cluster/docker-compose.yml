@@ -72,8 +72,8 @@ services:
   zookeeper-0:
     image: zookeeper:3.5
     environment:
-    - ZOO_MY_ID: 2
-    - ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181
     ports:
     - 2181
     volumes:
