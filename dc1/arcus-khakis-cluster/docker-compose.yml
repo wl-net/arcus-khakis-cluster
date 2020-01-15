@@ -3,7 +3,7 @@ services:
   cassandra-0:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
     environment:
-    - CASSANDRA_SEEDS=cassandra-0
+    - CASSANDRA_SEEDS=cassandra-0,192.168.2.10
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC1
     - MAX_HEAP_SIZE=256M
@@ -28,7 +28,7 @@ services:
   cassandra-1:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
     environment:
-    - CASSANDRA_SEEDS=cassandra-0
+    - CASSANDRA_SEEDS=cassandra-0,192.168.2.10
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC1
     - MAX_HEAP_SIZE=256M
@@ -53,7 +53,7 @@ services:
   cassandra-2:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
     environment:
-    - CASSANDRA_SEEDS=cassandra-0
+    - CASSANDRA_SEEDS=cassandra-0,192.168.2.10
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC1
     - MAX_HEAP_SIZE=256M
@@ -75,10 +75,38 @@ services:
         delay: 5s
         max_attempts: 5
         window: 120s
+  zookeeper-0:
+    image: zookeeper:3.5
+    environment:
+    - ZOO_MY_ID: 1
+    - ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181
+    ports:
+    - 2181
+    volumes:
+    - zookeeper-0:/data
+    networks:
+      arcus:
+        ipv4_address: 192.168.1.13
+  kafka-0:
+    image: gcr.io/arcus-238802/arcus/kafka:latest
+    environment:
+    - ZOOKEEPER=zookeeper-0
+    - ZOOKEEPEROPS=zookeeper-0
+    - KAFKA_HSIZE=512
+    ports:
+    - 9092
+    volumes:
+    - kafka-0:/data
+    networks:
+      arcus:
+        ipv4_address: 192.168.1.14
+
 volumes:
   cassandra-storage-0:
   cassandra-storage-1:
   cassandra-storage-2:
+  zookeeper-0:
+  kafka-0:
 
 networks:
   private:
