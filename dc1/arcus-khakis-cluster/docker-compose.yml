@@ -93,6 +93,7 @@ services:
     - ZOOKEEPER=zookeeper-0
     - ZOOKEEPEROPS=zookeeper-0
     - KAFKA_HSIZE=512
+    - ADVERTISED_HSTN=192.168.1.14
     ports:
     - 9092
     volumes:
