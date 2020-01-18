@@ -90,10 +90,10 @@ services:
   kafka-0:
     image: gcr.io/arcus-238802/arcus/kafka:latest
     environment:
-    - ZOOKEEPER=zookeeper-0:2181
-    - ZOOKEEPEROPS=zookeeper-0:2181
-    - KAFKA_HSIZE=512
-    - ADVERTISED_HSTN=192.168.1.14
+      ZOOKEEPER: zookeeper-0:2181
+      ZOOKEEPEROPS: zookeeper-0:2181
+      KAFKA_HSIZE: 512
+      ADVERTISED_HSTN: 192.168.1.14
     restart: on-failure
     ports:
     - 9092
