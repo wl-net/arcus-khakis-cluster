@@ -96,6 +96,8 @@ services:
       KAFKA_LOG_RETENTION_MS: 3600000
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_BROKER_RACK: dc2
+      KAFKA_REPLICATOR_SELECTOR_CLASS: org.apache.kafka.common.replica.RackAwareReplicaSelector
+      KAFKA_PROTOCOL_VERSION: 2.3
     ports:
     - 9092
     volumes:
