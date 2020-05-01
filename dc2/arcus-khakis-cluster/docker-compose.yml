@@ -98,6 +98,7 @@ services:
       KAFKA_BROKER_RACK: dc2
       KAFKA_REPLICATOR_SELECTOR_CLASS: org.apache.kafka.common.replica.RackAwareReplicaSelector
       KAFKA_PROTOCOL_VERSION: 2.3
+    restart: on-failure
     ports:
     - 9092
     volumes:
