@@ -9,7 +9,7 @@ This project contains docker-compose configuration suitable for bringing up a 3 
 This DC runs all services (Kafka, Zookeeper, and Cassandra) and is designed to run alongside Arcus Platform. Requires 4-6GB of RAM and 20GB or more of disk space.
 
 | Service | IP Address  |
-|---|---|---|---|---|
+|---|---|
 | casandra-0  | 192.168.1.10  |
 | casandra-1  | 192.168.1.11  |
 | casandra-2  | 192.168.1.12  |
@@ -21,7 +21,7 @@ This DC runs all services (Kafka, Zookeeper, and Cassandra) and is designed to r
 This DC runs all services (Kafka, Zookeeper, and Cassandra) and is designed to run alongside Arcus Platform. Requires 4-6GB of RAM and 20GB or more of disk space.
 
 | Service | IP Address  |
-|---|---|---|---|---|
+|---|---|
 | casandra-0  | 192.168.2.10  |
 | casandra-1  | 192.168.2.11  |
 | casandra-2  | 192.168.2.12  |
@@ -34,7 +34,7 @@ This DC runs minimal services (Kafka and Cassandra) and is designed to run to so
 
 
 | Service | IP Address  |
-|---|---|---|---|---|
+|---|---|
 | casandra-0  | 192.168.3.10  |
 | casandra-1  | 192.168.3.11  |
 | casandra-2  | 192.168.3.12  |
