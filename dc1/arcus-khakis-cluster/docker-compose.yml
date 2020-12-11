@@ -6,7 +6,7 @@ services:
     - CASSANDRA_SEEDS=cassandra-0,192.168.2.10
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC1
-    - MAX_HEAP_SIZE=256M
+    - MAX_HEAP_SIZE=512M
     - HEAP_NEWSIZE=256M
     ports:
     - 7000
@@ -21,9 +21,8 @@ services:
         ipv4_address: 192.168.1.10
     deploy:
       restart_policy:
-        condition: always
+        condition: any
         delay: 5s
-        max_attempts: 5
         window: 120s
   cassandra-1:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
@@ -31,7 +30,7 @@ services:
     - CASSANDRA_SEEDS=cassandra-0,192.168.2.10
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC1
-    - MAX_HEAP_SIZE=256M
+    - MAX_HEAP_SIZE=512M
     - HEAP_NEWSIZE=256M
     ports:
     - 7000
@@ -46,9 +45,8 @@ services:
         ipv4_address: 192.168.1.11
     deploy:
       restart_policy:
-        condition: always
+        condition: any
         delay: 5s
-        max_attempts: 5
         window: 120s
   cassandra-2:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
@@ -56,7 +54,7 @@ services:
     - CASSANDRA_SEEDS=cassandra-0,192.168.2.10
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC1
-    - MAX_HEAP_SIZE=256M
+    - MAX_HEAP_SIZE=512M
     - HEAP_NEWSIZE=256M
     ports:
     - 7000
@@ -71,12 +69,11 @@ services:
         ipv4_address: 192.168.1.12
     deploy:
       restart_policy:
-        condition: always
+        condition: any
         delay: 5s
-        max_attempts: 5
         window: 120s
   zookeeper-0:
-    image: zookeeper:3.6
+    image: zookeeper:3.5
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181 server.3=192.168.3.13:2888:3888;2181
