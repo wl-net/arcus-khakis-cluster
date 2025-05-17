@@ -25,6 +25,9 @@ services:
         delay: 5s
         max_attempts: 5
         window: 120s
+    logging:
+      options:
+        max-size: 50m
   cassandra-1:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
     environment:
@@ -50,6 +53,9 @@ services:
         delay: 5s
         max_attempts: 5
         window: 120s
+    logging:
+      options:
+        max-size: 50m
   cassandra-2:
     image: gcr.io/arcus-238802/arcus/cassandra:latest
     environment:
@@ -75,6 +81,9 @@ services:
         delay: 5s
         max_attempts: 5
         window: 120s
+    logging:
+      options:
+        max-size: 50m
   zookeeper-0:
     image: zookeeper:3.6
     environment:
