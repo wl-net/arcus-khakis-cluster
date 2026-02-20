@@ -13,8 +13,8 @@ This DC runs all services (Kafka, Zookeeper, and Cassandra) and is designed to r
 | casandra-0  | 192.168.1.10  |
 | casandra-1  | 192.168.1.11  |
 | casandra-2  | 192.168.1.12  |
-| kafka-0  | 192.168.1.13  |
-| zookeeper-0  | 192.168.1.14  |
+| zookeeper-0  | 192.168.1.13  |
+| kafka-0  | 192.168.1.14  |
 
 ## DC2
 
@@ -25,8 +25,8 @@ This DC runs all services (Kafka, Zookeeper, and Cassandra) and is designed to r
 | casandra-0  | 192.168.2.10  |
 | casandra-1  | 192.168.2.11  |
 | casandra-2  | 192.168.2.12  |
-| kafka-0  | 192.168.2.13  |
-| zookeeper-0  | 192.168.2.14  |
+| zookeeper-0  | 192.168.2.13  |
+| kafka-0  | 192.168.2.14  |
 
 ## DC3
 
