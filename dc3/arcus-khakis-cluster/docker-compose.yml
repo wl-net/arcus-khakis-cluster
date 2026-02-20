@@ -1,4 +1,3 @@
-version: '3'
 services:
   cassandra-0:
     image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:latest
@@ -19,9 +18,10 @@ services:
     networks:
       arcus:
         ipv4_address: 192.168.3.10
+    restart: always
     deploy:
       restart_policy:
-        condition: always
+        condition: any
         delay: 5s
         max_attempts: 5
         window: 120s
@@ -47,9 +47,10 @@ services:
     networks:
       arcus:
         ipv4_address: 192.168.3.11
+    restart: always
     deploy:
       restart_policy:
-        condition: always
+        condition: any
         delay: 5s
         max_attempts: 5
         window: 120s
@@ -75,9 +76,10 @@ services:
     networks:
       arcus:
         ipv4_address: 192.168.3.12
+    restart: always
     deploy:
       restart_policy:
-        condition: always
+        condition: any
         delay: 5s
         max_attempts: 5
         window: 120s
@@ -96,6 +98,8 @@ services:
     networks:
       arcus:
         ipv4_address: 192.168.3.13
+    restart: always
+
 volumes:
   cassandra-storage-0:
   cassandra-storage-1:
