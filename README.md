@@ -21,6 +21,22 @@ Docker Compose configuration for a 3-node highly-available Arcus Platform cluste
 
 # Deploy a specific service
 ./arcuscmd.sh deploy kafka-0
+
+# Show Cassandra ring status across all DCs
+./arcuscmd.sh status
+
+# Verify all containers are healthy
+./arcuscmd.sh check
+
+# Tail logs for a service
+./arcuscmd.sh logs cassandra-0
+
+# Open a shell or CQL shell
+./arcuscmd.sh shell cassandra-0
+./arcuscmd.sh dbshell
+
+# Trigger a manual Cassandra repair
+./arcuscmd.sh repair
 ```
 
 ## DCs
@@ -79,7 +95,7 @@ docker-compose logs -f cassandra-repair
 To trigger a manual repair:
 
 ```bash
-docker-compose exec cassandra-repair /repair/cassandra-repair.sh
+./arcuscmd.sh repair
 ```
 
 ## Network

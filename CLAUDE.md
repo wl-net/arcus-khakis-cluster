@@ -44,10 +44,16 @@ Each DC uses a macvlan network on parent interface `br0`:
 CLI tool for managing the cluster. Detects docker vs podman automatically.
 
 - `install` — Install/upgrade docker-compose (or podman-compose)
+- `status` — Show full Cassandra ring via `nodetool status`
+- `check` — Verify all containers are running and reachable (Cassandra UN, Zookeeper mode, etc.)
 - `update` — Git pull with fast-forward, show changes
 - `deploy` — Rolling Cassandra deploy (one node at a time, waits for UN status)
 - `deploy --pull` — Same but pulls images first
 - `deploy <svc>` — Deploy a specific service without health checks
+- `logs <svc>` — Tail logs for a service
+- `shell <svc>` — Open a shell on a service container
+- `dbshell` — Open `cqlsh` on cassandra-0
+- `repair` — Trigger a manual Cassandra repair
 
 ## Automated Cassandra Repair
 
