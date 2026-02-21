@@ -262,8 +262,10 @@ function check() {
         fi
         ;;
       zookeeper-*)
-        if echo ruok | "$RUNTIME" exec -i "$container" nc localhost 2181 2>/dev/null | grep -q imok; then
-          echo "OK    $svc ($ip) zookeeper=imok"
+        local zk_mode
+        zk_mode=$("$RUNTIME" exec "$container" zkServer.sh status 2>&1 | grep "Mode:" | awk '{print $2}')
+        if [[ -n "$zk_mode" ]]; then
+          echo "OK    $svc ($ip) zookeeper=$zk_mode"
         else
           echo "WARN  $svc ($ip) running but zookeeper not responding"
           failed=$((failed + 1))
