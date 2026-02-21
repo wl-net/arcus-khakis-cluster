@@ -1,5 +1,7 @@
 # arcus-khakis-cluster
 
+[![CI](https://github.com/wl-net/arcus-khakis-cluster/actions/workflows/ci.yml/badge.svg)](https://github.com/wl-net/arcus-khakis-cluster/actions/workflows/ci.yml)
+
 Docker Compose configuration for a 3-node highly-available Arcus Platform cluster spanning three data centers.
 
 ## Quick Start
