@@ -96,6 +96,18 @@ services:
       arcus:
         ipv4_address: 192.168.2.13
     restart: always
+  cassandra-repair:
+    image: docker:cli
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ../../repair:/repair:ro
+    entrypoint: /repair/entrypoint.sh
+    environment:
+    - REPAIR_HOUR=6
+    restart: always
+    logging:
+      options:
+        max-size: 50m
   kafka-0:
     image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:latest
     environment:
