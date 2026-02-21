@@ -9,9 +9,9 @@ log() {
 log "Cassandra repair scheduler started (target hour: ${REPAIR_HOUR}:00 UTC)"
 
 while true; do
-  CURRENT_HOUR=$(date -u +%H | sed 's/^0//')
-  CURRENT_MIN=$(date -u +%M | sed 's/^0//')
-  CURRENT_SEC=$(date -u +%S | sed 's/^0//')
+  CURRENT_HOUR=$(date -u +%-H)
+  CURRENT_MIN=$(date -u +%-M)
+  CURRENT_SEC=$(date -u +%-S)
 
   # Seconds since midnight
   NOW_SECS=$(( CURRENT_HOUR * 3600 + CURRENT_MIN * 60 + CURRENT_SEC ))
