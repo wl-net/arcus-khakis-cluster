@@ -7,7 +7,8 @@ if [[ $EUID -eq 0 ]]; then
 fi
 
 SCRIPT_PATH="$0"
-SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
+SCRIPT_DIR=$(dirname "${SCRIPT_PATH}") # reserved for future use
+export SCRIPT_DIR
 
 if ! ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
   echo "Couldn't get root of git repository. You must checkout arcus-khakis-cluster as a git repository, not as an extracted zip."
@@ -87,8 +88,6 @@ function install_compose() {
 }
 
 function find_compose_dir() {
-  local hostname
-  hostname=$(hostname)
   for dc in "${DCS[@]}"; do
     local dir="$ROOT/$dc/arcus-khakis-cluster"
     if [[ -f "$dir/docker-compose.yml" ]]; then

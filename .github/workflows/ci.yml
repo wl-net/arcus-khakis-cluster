@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: shellcheck -x arcuscmd.sh repair/cassandra-repair.sh repair/entrypoint.sh
+
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Help prints without docker
+        run: |
+          output=$(./arcuscmd.sh help)
+          echo "$output"
+          echo "$output" | grep -q 'deploy'
+      - name: Root guard rejects running as root
+        run: |
+          output=$(sudo ./arcuscmd.sh help 2>&1 || true)
+          echo "$output"
+          echo "$output" | grep -q 'Do not run arcuscmd as root'
+      - name: Unknown subcommand exits non-zero
+        run: |
+          if ./arcuscmd.sh notarealcommand 2>&1; then
+            echo "Expected non-zero exit for unknown subcommand"
+            exit 1
+          fi

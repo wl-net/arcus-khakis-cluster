@@ -13,7 +13,7 @@ if [ -z "$CONTAINERS" ]; then
   exit 1
 fi
 
-log "Found Cassandra containers: $(echo $CONTAINERS | tr '\n' ' ')"
+log "Found Cassandra containers: $(echo "$CONTAINERS" | tr '\n' ' ')"
 
 # Discover non-system keyspaces from the first available node
 FIRST_NODE=$(echo "$CONTAINERS" | head -n1)
@@ -27,7 +27,7 @@ if [ -z "$KEYSPACES" ]; then
   exit 1
 fi
 
-log "Keyspaces to repair: $(echo $KEYSPACES | tr '\n' ' ')"
+log "Keyspaces to repair: $(echo "$KEYSPACES" | tr '\n' ' ')"
 
 # Repair each node sequentially
 for CONTAINER in $CONTAINERS; do
