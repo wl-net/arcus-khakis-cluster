@@ -19,7 +19,7 @@ log "Found Cassandra containers: $(echo $CONTAINERS | tr '\n' ' ')"
 FIRST_NODE=$(echo "$CONTAINERS" | head -n1)
 log "Discovering keyspaces from $FIRST_NODE..."
 
-KEYSPACES=$(docker exec "$FIRST_NODE" cqlsh -e "DESCRIBE KEYSPACES" 2>/dev/null | tr -s ' \n' '\n' | grep -v -E '^(system|system_auth|system_distributed|system_schema|system_traces|system_virtual_schema)$' | grep -v '^$' | sort)
+KEYSPACES=$(docker exec "$FIRST_NODE" cqlsh "::ffff:127.0.0.1" -e "DESCRIBE KEYSPACES" 2>/dev/null | tr -s ' \n' '\n' | grep -v -E '^(system|system_auth|system_distributed|system_schema|system_traces|system_virtual_schema)$' | grep -v '^$' | sort)
 
 if [ -z "$KEYSPACES" ]; then
   log "ERROR: No non-system keyspaces found"
