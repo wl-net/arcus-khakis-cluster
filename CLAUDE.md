@@ -5,6 +5,9 @@ Docker Compose configurations for a 3-node highly-available Arcus Platform clust
 ## Project Structure
 
 ```
+arcuscmd.sh                                  # CLI tool for managing the cluster
+repair/cassandra-repair.sh                   # Automated Cassandra repair script
+repair/entrypoint.sh                         # Sleep-loop scheduler for daily repairs
 dc1/arcus-khakis-cluster/docker-compose.yml  # DC1: full services (Cassandra, Kafka, Zookeeper)
 dc2/arcus-khakis-cluster/docker-compose.yml  # DC2: full services (Cassandra, Kafka, Zookeeper)
 dc3/arcus-khakis-cluster/docker-compose.yml  # DC3: quorum only (Cassandra, Zookeeper, no Kafka)
@@ -29,4 +32,31 @@ Each DC uses a macvlan network on parent interface `br0`:
 - **Cassandra heap**: DC1/DC2 use `MAX_HEAP_SIZE=512M`; DC3 uses `256M` (lightweight quorum node)
 - **Kafka**: Rack-aware replication, broker IDs 1/2 in DC1/DC2, `KAFKA_PROTOCOL_VERSION=2.3`
 - **Logging**: All services use `max-size: 50m`
-- **DC3 purpose**: Quorum/tiebreaker only — no Kafka, smaller heap, `max_attempts: 5` restart policy
+- **DC3 purpose**: Quorum/tiebreaker only — no Kafka, smaller heap
+- **Nodetool path**: `/opt/cassandra/bin/nodetool` (not in default PATH)
+- **Cassandra CQL**: Requires macvlan IP (via `docker inspect`), not localhost
+- **Nodetool JMX**: Uses `::ffff:127.0.0.1` for the `-h` flag
+- **Docker API**: DC hosts run older Docker daemons (API 1.41); containers using `docker:cli` need `DOCKER_API_VERSION=1.41`
+- **docker-compose**: DC hosts use v1 (pip-installed, target version 1.27.4); `docker compose` v2 plugin is not available
+
+## arcuscmd.sh
+
+CLI tool for managing the cluster. Detects docker vs podman automatically.
+
+- `install` — Install/upgrade docker-compose (or podman-compose)
+- `update` — Git pull with fast-forward, show changes
+- `deploy` — Rolling Cassandra deploy (one node at a time, waits for UN status)
+- `deploy --pull` — Same but pulls images first
+- `deploy <svc>` — Deploy a specific service without health checks
+
+## Automated Cassandra Repair
+
+Each DC runs a `cassandra-repair` service (`docker:cli` image) on a daily schedule, staggered across DCs:
+
+| DC | REPAIR_HOUR (UTC) |
+|----|-------------------|
+| DC1 | 2 |
+| DC2 | 6 |
+| DC3 | 10 |
+
+The repair script discovers keyspaces via `cqlsh` and runs `nodetool repair -pr` sequentially on each node.
