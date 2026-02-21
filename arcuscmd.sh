@@ -42,6 +42,9 @@ arcuscmd: manage the arcus-khakis-cluster deployment
 Setup:
   install             Install compose tool (docker-compose or podman-compose)
 
+Status:
+  check               Verify all containers are running and reachable
+
 Deploy:
   update              Pull latest changes and show what changed
   deploy [svc...]     Rolling deploy of services (default: all Cassandra nodes)
@@ -208,6 +211,82 @@ function deploy() {
   echo "All Cassandra nodes deployed successfully."
 }
 
+function check() {
+  if [[ -z "$COMPOSE_CMD" ]]; then
+    echo "Error: No compose tool found. Run './arcuscmd.sh install' first."
+    exit 1
+  fi
+
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  local failed=0
+
+  # Get all services defined in the compose file
+  local services
+  services=$($COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null)
+
+  for svc in $services; do
+    local container
+    container=$(get_container_name "$compose_dir" "$svc")
+    if [[ -z "$container" ]]; then
+      echo "DOWN  $svc (not running)"
+      failed=$((failed + 1))
+      continue
+    fi
+
+    local status
+    status=$("$RUNTIME" inspect -f '{{.State.Status}}' "$container" 2>/dev/null)
+    if [[ "$status" != "running" ]]; then
+      echo "DOWN  $svc ($status)"
+      failed=$((failed + 1))
+      continue
+    fi
+
+    local ip
+    ip=$(get_container_ip "$container")
+
+    # Service-specific reachability checks
+    case "$svc" in
+      cassandra-repair)
+        echo "OK    $svc running"
+        ;;
+      cassandra-*)
+        if "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status &>/dev/null; then
+          local node_status
+          node_status=$("$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep "$ip" | awk '{print $1}')
+          echo "OK    $svc ($ip) cassandra=$node_status"
+        else
+          echo "WARN  $svc ($ip) running but nodetool unreachable"
+          failed=$((failed + 1))
+        fi
+        ;;
+      zookeeper-*)
+        if echo ruok | "$RUNTIME" exec -i "$container" nc localhost 2181 2>/dev/null | grep -q imok; then
+          echo "OK    $svc ($ip) zookeeper=imok"
+        else
+          echo "WARN  $svc ($ip) running but zookeeper not responding"
+          failed=$((failed + 1))
+        fi
+        ;;
+      kafka-*)
+        echo "OK    $svc ($ip) running"
+        ;;
+      *)
+        echo "OK    $svc ($ip) running"
+        ;;
+    esac
+  done
+
+  echo
+  if [[ $failed -gt 0 ]]; then
+    echo "$failed service(s) with issues."
+    return 1
+  else
+    echo "All services healthy."
+  fi
+}
+
 function update() {
   cd "$ROOT"
 
@@ -239,6 +318,9 @@ subcmd=${1:-help}
 case "$subcmd" in
 install)
   install_compose
+  ;;
+check)
+  check
   ;;
 deploy)
   deploy "${@:2}"
