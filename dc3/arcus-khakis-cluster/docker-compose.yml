@@ -23,7 +23,6 @@ services:
       restart_policy:
         condition: any
         delay: 5s
-        max_attempts: 5
         window: 120s
     logging:
       options:
@@ -52,7 +51,6 @@ services:
       restart_policy:
         condition: any
         delay: 5s
-        max_attempts: 5
         window: 120s
     logging:
       options:
@@ -81,7 +79,6 @@ services:
       restart_policy:
         condition: any
         delay: 5s
-        max_attempts: 5
         window: 120s
     logging:
       options:
