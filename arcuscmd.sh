@@ -43,12 +43,19 @@ Setup:
   install             Install compose tool (docker-compose or podman-compose)
 
 Status:
+  status              Show Cassandra cluster status (nodetool status)
   check               Verify all containers are running and reachable
 
 Deploy:
   update              Pull latest changes and show what changed
   deploy [svc...]     Rolling deploy of services (default: all Cassandra nodes)
                         --pull  Pull images before restarting
+
+Operations:
+  logs <svc>          Tail logs for a service
+  shell <svc>         Open a shell on a service container
+  dbshell             Open a Cassandra CQL shell
+  repair              Trigger a manual Cassandra repair
 
 ENDOFDOC
 }
@@ -166,11 +173,7 @@ function deploy() {
     fi
   done
 
-  if [[ -z "$COMPOSE_CMD" ]]; then
-    echo "Error: No compose tool found. Run './arcuscmd.sh install' first."
-    exit 1
-  fi
-
+  require_compose
   local compose_dir
   compose_dir=$(find_compose_dir)
   echo "Using compose directory: $compose_dir"
@@ -227,11 +230,7 @@ function deploy() {
 }
 
 function check() {
-  if [[ -z "$COMPOSE_CMD" ]]; then
-    echo "Error: No compose tool found. Run './arcuscmd.sh install' first."
-    exit 1
-  fi
-
+  require_compose
   local compose_dir
   compose_dir=$(find_compose_dir)
 
@@ -304,6 +303,107 @@ function check() {
   fi
 }
 
+function require_compose() {
+  if [[ -z "$COMPOSE_CMD" ]]; then
+    echo "Error: No compose tool found. Run './arcuscmd.sh install' first."
+    exit 1
+  fi
+}
+
+function status() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  local container
+  container=$(get_container_name "$compose_dir" "cassandra-0")
+  if [[ -z "$container" ]]; then
+    echo "Error: cassandra-0 is not running."
+    exit 1
+  fi
+
+  "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status
+}
+
+function logs() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: arcuscmd logs <service>"
+    echo
+    echo "Services:"
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null
+    exit 1
+  fi
+
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" logs -f "$@"
+}
+
+function shell_exec() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: arcuscmd shell <service>"
+    echo
+    echo "Services:"
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null
+    exit 1
+  fi
+
+  local svc="$1"
+  shift
+  local container
+  container=$(get_container_name "$compose_dir" "$svc")
+  if [[ -z "$container" ]]; then
+    echo "Error: $svc is not running."
+    exit 1
+  fi
+
+  if [[ $# -gt 0 ]]; then
+    "$RUNTIME" exec -it "$container" "$@"
+  else
+    "$RUNTIME" exec -it "$container" sh
+  fi
+}
+
+function dbshell() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  local container
+  container=$(get_container_name "$compose_dir" "cassandra-0")
+  if [[ -z "$container" ]]; then
+    echo "Error: cassandra-0 is not running."
+    exit 1
+  fi
+
+  local ip
+  ip=$(get_container_ip "$container")
+  "$RUNTIME" exec -it "$container" /opt/cassandra/bin/cqlsh "$ip"
+}
+
+function repair() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  local container
+  container=$(get_container_name "$compose_dir" "cassandra-repair")
+  if [[ -z "$container" ]]; then
+    echo "Error: cassandra-repair is not running."
+    echo "Start it with: $COMPOSE_CMD -f $compose_dir/docker-compose.yml up -d cassandra-repair"
+    exit 1
+  fi
+
+  echo "Starting manual Cassandra repair..."
+  "$RUNTIME" exec "$container" /repair/cassandra-repair.sh
+}
+
 function update() {
   cd "$ROOT"
 
@@ -336,6 +436,9 @@ case "$subcmd" in
 install)
   install_compose
   ;;
+status)
+  status
+  ;;
 check)
   check
   ;;
@@ -344,6 +447,18 @@ deploy)
   ;;
 update)
   update
+  ;;
+logs)
+  logs "${@:2}"
+  ;;
+shell)
+  shell_exec "${@:2}"
+  ;;
+dbshell)
+  dbshell
+  ;;
+repair)
+  repair
   ;;
 help)
   print_available
