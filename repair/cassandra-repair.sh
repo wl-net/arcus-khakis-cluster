@@ -15,16 +15,20 @@ fi
 
 log "Found Cassandra containers: $(echo "$CONTAINERS" | tr '\n' ' ')"
 
-# Discover non-system keyspaces from the first available node
-FIRST_NODE=$(echo "$CONTAINERS" | head -n1)
-FIRST_NODE_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$FIRST_NODE")
-log "Discovering keyspaces from $FIRST_NODE ($FIRST_NODE_IP)..."
+# Use provided keyspaces or discover non-system ones
+if [ $# -gt 0 ]; then
+  KEYSPACES="$*"
+else
+  FIRST_NODE=$(echo "$CONTAINERS" | head -n1)
+  FIRST_NODE_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$FIRST_NODE")
+  log "Discovering keyspaces from $FIRST_NODE ($FIRST_NODE_IP)..."
 
-KEYSPACES=$(docker exec "$FIRST_NODE" cqlsh "$FIRST_NODE_IP" -e "DESCRIBE KEYSPACES" 2>/dev/null | tr -s ' \n' '\n' | grep -v -E '^(system|system_auth|system_distributed|system_schema|system_traces|system_virtual_schema)$' | grep -v '^$' | sort)
+  KEYSPACES=$(docker exec "$FIRST_NODE" cqlsh "$FIRST_NODE_IP" -e "DESCRIBE KEYSPACES" 2>/dev/null | tr -s ' \n' '\n' | grep -v -E '^(system|system_auth|system_distributed|system_schema|system_traces|system_virtual_schema)$' | grep -v '^$' | sort)
 
-if [ -z "$KEYSPACES" ]; then
-  log "ERROR: No non-system keyspaces found"
-  exit 1
+  if [ -z "$KEYSPACES" ]; then
+    log "ERROR: No non-system keyspaces found"
+    exit 1
+  fi
 fi
 
 log "Keyspaces to repair: $(echo "$KEYSPACES" | tr '\n' ' ')"

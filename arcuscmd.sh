@@ -55,7 +55,7 @@ Operations:
   logs <svc>          Tail logs for a service
   shell <svc>         Open a shell on a service container
   dbshell             Open a Cassandra CQL shell
-  repair              Trigger a manual Cassandra repair
+  repair [keyspace]   Trigger a manual Cassandra repair (all keyspaces if none specified)
 
 ENDOFDOC
 }
@@ -400,8 +400,12 @@ function repair() {
     exit 1
   fi
 
-  echo "Starting manual Cassandra repair..."
-  "$RUNTIME" exec "$container" /repair/cassandra-repair.sh
+  if [[ $# -gt 0 ]]; then
+    echo "Starting manual Cassandra repair for keyspace(s): $*"
+  else
+    echo "Starting manual Cassandra repair (all keyspaces)..."
+  fi
+  "$RUNTIME" exec "$container" /repair/cassandra-repair.sh "$@"
 }
 
 function update() {
@@ -458,7 +462,7 @@ dbshell)
   dbshell
   ;;
 repair)
-  repair
+  repair "${@:2}"
   ;;
 help)
   print_available
