@@ -22,6 +22,9 @@ Docker Compose configuration for a 3-node highly-available Arcus Platform cluste
 # Deploy a specific service
 ./arcuscmd.sh deploy kafka-0
 
+# Bring up all services after a config change
+./arcuscmd.sh apply
+
 # Show Cassandra ring status across all DCs
 ./arcuscmd.sh status
 

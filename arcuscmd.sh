@@ -48,6 +48,7 @@ Status:
 
 Deploy:
   update              Pull latest changes and show what changed
+  apply               Bring up all services (docker-compose up -d)
   deploy [svc...]     Rolling deploy of services (default: all Cassandra nodes)
                         --pull  Pull images before restarting
 
@@ -99,35 +100,62 @@ function install_compose() {
 
 CACHE_DIR="$ROOT/.cache"
 
+function detect_dc() {
+  for dc in "${DCS[@]}"; do
+    local dir="$ROOT/$dc/arcus-khakis-cluster"
+    if [[ -f "$dir/docker-compose.yml" ]]; then
+      if $COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q 2>/dev/null | head -1 | grep -q .; then
+        echo "$dc"
+        return
+      fi
+    fi
+  done
+}
+
 function find_compose_dir() {
+  local verify="${1:-false}"
+
   # Use cached DC if available
   if [[ -f "$CACHE_DIR/dc" ]]; then
     local cached_dc
     cached_dc=$(cat "$CACHE_DIR/dc")
     local cached_dir="$ROOT/$cached_dc/arcus-khakis-cluster"
     if [[ -f "$cached_dir/docker-compose.yml" ]]; then
+      # Verify cache is still valid if requested
+      if [[ "$verify" == "true" ]]; then
+        local detected
+        detected=$(detect_dc)
+        if [[ -n "$detected" && "$detected" != "$cached_dc" ]]; then
+          echo "WARNING: Cached DC is $cached_dc but detected running containers for $detected" >&2
+          read -r -p "Use $detected instead? [Y/n] " confirm
+          if [[ ! "$confirm" =~ ^[Nn] ]]; then
+            mkdir -p "$CACHE_DIR"
+            echo "$detected" > "$CACHE_DIR/dc"
+            echo "$ROOT/$detected/arcus-khakis-cluster"
+            return
+          fi
+        fi
+      fi
       echo "$cached_dir"
       return
     fi
   fi
 
-  for dc in "${DCS[@]}"; do
-    local dir="$ROOT/$dc/arcus-khakis-cluster"
-    if [[ -f "$dir/docker-compose.yml" ]]; then
-      # Check if any container from this DC's compose is running locally
-      if $COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q 2>/dev/null | head -1 | grep -q .; then
-        read -r -p "Detected $dc — proceed? [Y/n] " confirm
-        if [[ "$confirm" =~ ^[Nn] ]]; then
-          echo "Aborted." >&2
-          exit 1
-        fi
-        mkdir -p "$CACHE_DIR"
-        echo "$dc" > "$CACHE_DIR/dc"
-        echo "$dir"
-        return
-      fi
+  local detected
+  detected=$(detect_dc)
+  if [[ -n "$detected" ]]; then
+    local dir="$ROOT/$detected/arcus-khakis-cluster"
+    read -r -p "Detected $detected — proceed? [Y/n] " confirm
+    if [[ "$confirm" =~ ^[Nn] ]]; then
+      echo "Aborted." >&2
+      exit 1
     fi
-  done
+    mkdir -p "$CACHE_DIR"
+    echo "$detected" > "$CACHE_DIR/dc"
+    echo "$dir"
+    return
+  fi
+
   echo "Error: Could not find a running DC on this host." >&2
   echo "Run from a host that has containers running, or specify the DC directory." >&2
   exit 1
@@ -159,6 +187,17 @@ function wait_for_node() {
 
   echo "  WARNING: Node $container did not reach UN status within ${NODE_TIMEOUT}s"
   return 1
+}
+
+function apply() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir true)
+  echo "Applying configuration from: $compose_dir"
+
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-pull
+  echo
+  echo "All services started."
 }
 
 function deploy() {
@@ -445,6 +484,9 @@ status)
   ;;
 check)
   check
+  ;;
+apply)
+  apply
   ;;
 deploy)
   deploy "${@:2}"
