@@ -35,7 +35,7 @@ for CONTAINER in $CONTAINERS; do
 
   for KS in $KEYSPACES; do
     log "Repairing keyspace '$KS' on $CONTAINER..."
-    if docker exec "$CONTAINER" nodetool -h "::ffff:127.0.0.1" repair "$KS" -pr; then
+    if docker exec "$CONTAINER" /opt/cassandra/bin/nodetool -h "::ffff:127.0.0.1" repair "$KS" -pr; then
       log "Completed repair of '$KS' on $CONTAINER"
     else
       log "WARNING: Repair of '$KS' on $CONTAINER failed (exit code $?), continuing..."
