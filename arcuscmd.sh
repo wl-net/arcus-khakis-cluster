@@ -93,6 +93,11 @@ function find_compose_dir() {
     if [[ -f "$dir/docker-compose.yml" ]]; then
       # Check if any container from this DC's compose is running locally
       if $COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q 2>/dev/null | head -1 | grep -q .; then
+        read -r -p "Detected $dc — proceed? [Y/n] " confirm
+        if [[ "$confirm" =~ ^[Nn] ]]; then
+          echo "Aborted." >&2
+          exit 1
+        fi
         echo "$dir"
         return
       fi
