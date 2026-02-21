@@ -90,7 +90,20 @@ function install_compose() {
   fi
 }
 
+CACHE_DIR="$ROOT/.cache"
+
 function find_compose_dir() {
+  # Use cached DC if available
+  if [[ -f "$CACHE_DIR/dc" ]]; then
+    local cached_dc
+    cached_dc=$(cat "$CACHE_DIR/dc")
+    local cached_dir="$ROOT/$cached_dc/arcus-khakis-cluster"
+    if [[ -f "$cached_dir/docker-compose.yml" ]]; then
+      echo "$cached_dir"
+      return
+    fi
+  fi
+
   for dc in "${DCS[@]}"; do
     local dir="$ROOT/$dc/arcus-khakis-cluster"
     if [[ -f "$dir/docker-compose.yml" ]]; then
@@ -101,6 +114,8 @@ function find_compose_dir() {
           echo "Aborted." >&2
           exit 1
         fi
+        mkdir -p "$CACHE_DIR"
+        echo "$dc" > "$CACHE_DIR/dc"
         echo "$dir"
         return
       fi
