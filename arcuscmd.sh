@@ -108,12 +108,42 @@ function install_compose() {
 CACHE_DIR="$ROOT/.cache"
 
 function detect_dc() {
+  # All DCs share the same compose project name (arcus-khakis-cluster), so
+  # 'compose ps -q' returns containers regardless of which DC's file is used.
+  # Determine the actual DC by checking the running container's IP subnet.
+  local container_id=""
   for dc in "${DCS[@]}"; do
     local dir="$ROOT/$dc/arcus-khakis-cluster"
     if [[ -f "$dir/docker-compose.yml" ]]; then
-      if $COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q 2>/dev/null | head -1 | grep -q .; then
-        echo "$dc"
-        return
+      container_id=$($COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q cassandra-0 2>/dev/null | head -1)
+      if [[ -n "$container_id" ]]; then
+        break
+      fi
+    fi
+  done
+
+  if [[ -z "$container_id" ]]; then
+    return
+  fi
+
+  local actual_ip
+  actual_ip=$("$RUNTIME" inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_id" 2>/dev/null)
+  if [[ -z "$actual_ip" ]]; then
+    return
+  fi
+
+  # Match IP against each DC's configured subnet
+  for dc in "${DCS[@]}"; do
+    local dir="$ROOT/$dc/arcus-khakis-cluster"
+    if [[ -f "$dir/docker-compose.yml" ]]; then
+      local subnet
+      subnet=$(grep -oP 'subnet:\s*\K[\d.]+' "$dir/docker-compose.yml" | head -1)
+      if [[ -n "$subnet" ]]; then
+        local prefix="${subnet%.*}"
+        if [[ "$actual_ip" == "$prefix".* ]]; then
+          echo "$dc"
+          return
+        fi
       fi
     fi
   done
