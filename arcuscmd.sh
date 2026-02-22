@@ -202,7 +202,7 @@ function apply() {
   compose_dir=$(find_compose_dir true)
   echo "Applying configuration from: $compose_dir"
 
-  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-pull
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d
   echo
   echo "All services started."
 }
