@@ -151,4 +151,4 @@ networks:
       parent: br0
     ipam:
       config:
-      - subnet: 192.168.1.1/24
+      - subnet: 192.168.1.0/24
