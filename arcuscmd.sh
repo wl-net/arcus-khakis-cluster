@@ -15,14 +15,21 @@ if ! ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
   exit 1
 fi
 
-DOCKER_COMPOSE_VERSION='1.27.4'
+DOCKER_MIN_VERSION='27.0.0'
+COMPOSE_MIN_VERSION='2.29.0'
 
 DCS=("dc1" "dc2" "dc3")
 
-# Detect container runtime
+# Detect container runtime and compose command
 if command -v docker &>/dev/null; then
   RUNTIME=docker
-  COMPOSE_CMD=docker-compose
+  if command -v docker-compose &>/dev/null; then
+    COMPOSE_CMD=docker-compose
+  elif docker compose version &>/dev/null; then
+    COMPOSE_CMD="docker compose"
+  else
+    COMPOSE_CMD=""
+  fi
 elif command -v podman &>/dev/null; then
   RUNTIME=podman
   COMPOSE_CMD=podman-compose
@@ -79,22 +86,21 @@ function install_compose() {
     echo
     echo "Installed podman-compose $(podman-compose version 2>/dev/null || echo "")"
   else
-    if command -v docker-compose &>/dev/null; then
-      local current
-      current=$(docker-compose version --short 2>/dev/null || echo "unknown")
-      echo "docker-compose is already installed (version $current)"
-      if [[ "$current" == "$DOCKER_COMPOSE_VERSION" ]]; then
-        echo "Already at target version $DOCKER_COMPOSE_VERSION, nothing to do."
-        return
-      fi
-      echo "Upgrading to $DOCKER_COMPOSE_VERSION..."
-    else
-      echo "Installing docker-compose $DOCKER_COMPOSE_VERSION..."
+    local current
+    current=$($COMPOSE_CMD version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo "")
+
+    if [[ -n "$current" ]] && version_gte "$current" "$COMPOSE_MIN_VERSION"; then
+      echo "Docker Compose $current is installed and meets minimum $COMPOSE_MIN_VERSION."
+      return
     fi
 
-    sudo pip3 install "docker-compose==$DOCKER_COMPOSE_VERSION"
-    echo
-    echo "Installed docker-compose $(docker-compose version --short)"
+    if [[ -n "$current" ]]; then
+      echo "Docker Compose $current is too old (minimum: $COMPOSE_MIN_VERSION)."
+    else
+      echo "Docker Compose is not installed."
+    fi
+    echo "Upgrade Docker to get a supported Compose version: https://docs.docker.com/engine/install/"
+    exit 1
   fi
 }
 
@@ -342,11 +348,43 @@ function check() {
   fi
 }
 
+function version_gte() {
+  # Returns 0 (true) if $1 >= $2
+  printf '%s\n%s\n' "$2" "$1" | sort -V -C
+}
+
+function check_versions() {
+  if [[ "$RUNTIME" != "docker" ]]; then
+    return
+  fi
+
+  local docker_version
+  docker_version=$(docker --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1)
+  if [[ -n "$docker_version" ]] && ! version_gte "$docker_version" "$DOCKER_MIN_VERSION"; then
+    echo "Error: Docker $docker_version is too old (minimum: $DOCKER_MIN_VERSION)."
+    echo "Upgrade Docker: https://docs.docker.com/engine/install/"
+    exit 1
+  fi
+
+  local compose_version
+  compose_version=$($COMPOSE_CMD version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1)
+  if [[ -n "$compose_version" ]] && ! version_gte "$compose_version" "$COMPOSE_MIN_VERSION"; then
+    echo "Error: Docker Compose $compose_version is too old (minimum: $COMPOSE_MIN_VERSION)."
+    if [[ "$compose_version" == 1.* ]]; then
+      echo "Docker Compose V1 is no longer supported. Upgrade Docker to get Compose V2."
+    else
+      echo "Upgrade: https://docs.docker.com/compose/install/"
+    fi
+    exit 1
+  fi
+}
+
 function require_compose() {
   if [[ -z "$COMPOSE_CMD" ]]; then
     echo "Error: No compose tool found. Run './arcuscmd.sh install' first."
     exit 1
   fi
+  check_versions
 }
 
 function status() {
