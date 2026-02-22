@@ -40,6 +40,9 @@ Docker Compose configuration for a 3-node highly-available Arcus Platform cluste
 
 # Trigger a manual Cassandra repair
 ./arcuscmd.sh repair
+
+# Upgrade SSTables on all Cassandra nodes
+./arcuscmd.sh upgradesstables
 ```
 
 ## DCs
@@ -92,7 +95,7 @@ Each DC includes a `cassandra-repair` service that runs daily repairs, staggered
 Repairs run sequentially per node within each DC using `nodetool repair -pr`. Logs are captured by the Docker logging driver:
 
 ```bash
-docker-compose logs -f cassandra-repair
+./arcuscmd.sh logs cassandra-repair
 ```
 
 To trigger a manual repair:
