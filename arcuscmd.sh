@@ -64,6 +64,7 @@ Operations:
   shell <svc>         Open a shell on a service container
   dbshell             Open a Cassandra CQL shell
   repair [keyspace]   Trigger a manual Cassandra repair (all keyspaces if none specified)
+  upgradesstables     Upgrade SSTables on all Cassandra nodes
 
 ENDOFDOC
 }
@@ -464,6 +465,30 @@ function dbshell() {
   "$RUNTIME" exec -it "$container" /opt/cassandra/bin/cqlsh "$ip"
 }
 
+function upgradesstables() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  echo "Running upgradesstables on all Cassandra nodes..."
+  for node in "${CASSANDRA_NODES[@]}"; do
+    local container
+    container=$(get_container_name "$compose_dir" "$node")
+    if [[ -z "$container" ]]; then
+      echo "SKIP  $node (not running)"
+      continue
+    fi
+
+    echo
+    echo "--- $node ---"
+    "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" upgradesstables "$@"
+    echo "--- $node done ---"
+  done
+
+  echo
+  echo "upgradesstables complete."
+}
+
 function repair() {
   require_compose
   local compose_dir
@@ -543,6 +568,9 @@ dbshell)
   ;;
 repair)
   repair "${@:2}"
+  ;;
+upgradesstables)
+  upgradesstables "${@:2}"
   ;;
 help)
   print_available
