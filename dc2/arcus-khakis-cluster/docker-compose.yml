@@ -103,7 +103,6 @@ services:
     - ../../repair:/repair:ro
     entrypoint: /repair/entrypoint.sh
     environment:
-    - DOCKER_API_VERSION=1.41
     - REPAIR_HOUR=6
     restart: always
     logging:

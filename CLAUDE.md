@@ -36,8 +36,7 @@ Each DC uses a macvlan network on parent interface `br0`:
 - **Nodetool path**: `/opt/cassandra/bin/nodetool` (not in default PATH)
 - **Cassandra CQL**: Requires macvlan IP (via `docker inspect`), not localhost
 - **Nodetool JMX**: Uses `::ffff:127.0.0.1` for the `-h` flag
-- **Docker API**: DC hosts run older Docker daemons (API 1.41); containers using `docker:cli` need `DOCKER_API_VERSION=1.41`
-- **docker-compose**: DC hosts use v1 (pip-installed, target version 1.27.4); `docker compose` v2 plugin is not available
+- **Docker**: Minimum Docker 27.0+, Compose V2 2.29+
 
 ## arcuscmd.sh
 
