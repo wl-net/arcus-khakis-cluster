@@ -13,6 +13,8 @@ services:
     - 7199
     - 9042
     - 9160
+    tmpfs:
+    - /opt/cassandra/logs
     volumes:
     - cassandra-storage-0:/data
     networks:
@@ -41,6 +43,8 @@ services:
     - 7199
     - 9042
     - 9160
+    tmpfs:
+    - /opt/cassandra/logs
     volumes:
     - cassandra-storage-1:/data
     networks:
@@ -69,6 +73,8 @@ services:
     - 7199
     - 9042
     - 9160
+    tmpfs:
+    - /opt/cassandra/logs
     volumes:
     - cassandra-storage-2:/data
     networks:
