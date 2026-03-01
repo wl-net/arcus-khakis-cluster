@@ -30,7 +30,7 @@ Each DC uses a macvlan network on parent interface `br0`:
 - **Cassandra DC**: Each DC has its own DC name (`DC1`, `DC2`, `DC3`) with `GossipingPropertyFileSnitch`
 - **Cassandra seeds**: DC1/DC2 nodes seed from each other's `192.168.x.10`; DC3 seeds from DC1/DC2
 - **Cassandra heap**: DC1/DC2 use `MAX_HEAP_SIZE=512M`; DC3 uses `256M` (lightweight quorum node)
-- **Kafka**: Rack-aware replication, broker IDs 1/2 in DC1/DC2, `KAFKA_PROTOCOL_VERSION=2.3`
+- **Kafka**: Rack-aware replication, broker IDs 1/2 in DC1/DC2, `KAFKA_PROTOCOL_VERSION=2.6`
 - **Logging**: All services use `max-size: 50m`
 - **DC3 purpose**: Quorum/tiebreaker only — no Kafka, smaller heap
 - **Nodetool path**: `/opt/cassandra/bin/nodetool` (not in default PATH)

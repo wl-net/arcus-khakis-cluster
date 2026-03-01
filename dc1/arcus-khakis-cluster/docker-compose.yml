@@ -124,7 +124,8 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_BROKER_RACK: dc1
       KAFKA_REPLICATOR_SELECTOR_CLASS: org.apache.kafka.common.replica.RackAwareReplicaSelector
-      KAFKA_PROTOCOL_VERSION: 2.3
+      KAFKA_PROTOCOL_VERSION: 2.6
+      KAFKA_LOG_MESSAGE_VERSION: 2.6
     restart: on-failure
     ports:
     - 9092
