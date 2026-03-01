@@ -126,6 +126,7 @@ services:
       KAFKA_REPLICATOR_SELECTOR_CLASS: org.apache.kafka.common.replica.RackAwareReplicaSelector
       KAFKA_PROTOCOL_VERSION: 2.6
       KAFKA_LOG_MESSAGE_VERSION: 2.6
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
     restart: on-failure
     ports:
     - 9092
