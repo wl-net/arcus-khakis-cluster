@@ -5,7 +5,7 @@ services:
     - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC2
-    - MAX_HEAP_SIZE=512M
+    - MAX_HEAP_SIZE=768M
     - HEAP_NEWSIZE=256M
     ports:
     - 7000
@@ -33,7 +33,7 @@ services:
     - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC2
-    - MAX_HEAP_SIZE=512M
+    - MAX_HEAP_SIZE=768M
     - HEAP_NEWSIZE=256M
     ports:
     - 7000
@@ -61,7 +61,7 @@ services:
     - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     - CASSANDRA_DC=DC2
-    - MAX_HEAP_SIZE=512M
+    - MAX_HEAP_SIZE=768M
     - HEAP_NEWSIZE=256M
     ports:
     - 7000
@@ -84,7 +84,7 @@ services:
       options:
         max-size: 50m
   zookeeper-0:
-    image: zookeeper:3.8
+    image: zookeeper:3.8.6
     environment:
       ZOO_MY_ID: 2
       ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181 server.3=192.168.3.13:2888:3888;2181
