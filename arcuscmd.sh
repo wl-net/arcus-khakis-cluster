@@ -261,7 +261,7 @@ function deploy() {
       if [[ "$pull" == true ]]; then
         $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" pull "$svc" || true
       fi
-      $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps "$svc"
+      $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps --force-recreate "$svc"
     done
     return
   fi
@@ -277,7 +277,7 @@ function deploy() {
     echo
     echo "--- Deploying $node ---"
 
-    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps "$node"
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps --force-recreate "$node"
 
     local container
     container=$(get_container_name "$compose_dir" "$node")
