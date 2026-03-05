@@ -65,6 +65,11 @@ Operations:
   dbshell             Open a Cassandra CQL shell
   repair [keyspace]   Trigger a manual Cassandra repair (all keyspaces if none specified)
   upgradesstables     Upgrade SSTables on all Cassandra nodes
+  snapshot [keyspace]  Take a Cassandra snapshot on all nodes
+    snapshot --list    List existing snapshots
+    snapshot --clear [name]  Clear snapshots (all, or by name)
+    snapshot --export <name> [dest-dir]  Export a snapshot to tar.gz files
+  backup [keyspace]   Snapshot + export in one step (saves to ./cassandra-backups/)
 
 ENDOFDOC
 }
@@ -566,6 +571,157 @@ function update() {
   fi
 }
 
+function snapshot_take() {
+  local compose_dir="$1"
+  shift
+  local tag="$1"
+  shift
+
+  local ks_args=()
+  if [[ $# -gt 0 ]]; then
+    echo "Taking snapshot '$tag' of keyspace(s): $*"
+    ks_args=("--" "$@")
+  else
+    echo "Taking snapshot '$tag' of all keyspaces..."
+  fi
+
+  for node in "${CASSANDRA_NODES[@]}"; do
+    local container
+    container=$(get_container_name "$compose_dir" "$node")
+    if [[ -z "$container" ]]; then
+      echo "SKIP  $node (not running)"
+      continue
+    fi
+    echo "  $node: taking snapshot..."
+    "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" snapshot -t "$tag" "${ks_args[@]}"
+  done
+
+  echo
+  echo "Snapshot '$tag' created on all nodes."
+}
+
+function snapshot_list() {
+  local compose_dir="$1"
+
+  for node in "${CASSANDRA_NODES[@]}"; do
+    local container
+    container=$(get_container_name "$compose_dir" "$node")
+    if [[ -z "$container" ]]; then
+      echo "SKIP  $node (not running)"
+      continue
+    fi
+    echo "--- $node ---"
+    "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" listsnapshots
+    echo
+  done
+}
+
+function snapshot_clear() {
+  local compose_dir="$1"
+  local name="${2:-}"
+
+  local clear_args=()
+  if [[ -n "$name" ]]; then
+    clear_args+=("-t" "$name")
+    echo "Clearing snapshot '$name' on all nodes..."
+  else
+    clear_args+=("--all")
+    echo "Clearing all snapshots on all nodes..."
+  fi
+
+  for node in "${CASSANDRA_NODES[@]}"; do
+    local container
+    container=$(get_container_name "$compose_dir" "$node")
+    if [[ -z "$container" ]]; then
+      echo "SKIP  $node (not running)"
+      continue
+    fi
+    echo "  $node: clearing snapshots..."
+    "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" clearsnapshot "${clear_args[@]}"
+  done
+  echo "Done."
+}
+
+function snapshot_export() {
+  local compose_dir="$1"
+  local name="$2"
+  local dest_dir="${3:-./cassandra-backups}"
+
+  mkdir -p "$dest_dir"
+  echo "Exporting snapshot '$name' to $dest_dir/"
+
+  for node in "${CASSANDRA_NODES[@]}"; do
+    local container
+    container=$(get_container_name "$compose_dir" "$node")
+    if [[ -z "$container" ]]; then
+      echo "SKIP  $node (not running)"
+      continue
+    fi
+
+    local outfile="$dest_dir/${node}-${name}.tar.gz"
+    echo "  $node: finding snapshot files..."
+
+    # Find all snapshot dirs matching the tag and tar them from inside the container
+    if ! "$RUNTIME" exec "$container" sh -c "find /data/data -path '*/snapshots/$name' -type d" | grep -q .; then
+      echo "  SKIP  $node: no snapshot '$name' found"
+      continue
+    fi
+
+    echo "  $node: exporting to $outfile..."
+    "$RUNTIME" exec "$container" sh -c "cd /data && find data -path '*/snapshots/$name' -type d -exec find {} -type f \; | tar czf - -T -" > "$outfile"
+    local size
+    size=$(du -h "$outfile" | cut -f1)
+    echo "  $node: exported ($size)"
+  done
+
+  echo
+  echo "Export complete. Files in $dest_dir/"
+  ls -lh "$dest_dir/"*-"${name}.tar.gz" 2>/dev/null
+}
+
+function snapshot() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  case "${1:-}" in
+    --list)
+      snapshot_list "$compose_dir"
+      ;;
+    --clear)
+      snapshot_clear "$compose_dir" "${2:-}"
+      ;;
+    --export)
+      if [[ -z "${2:-}" ]]; then
+        echo "Usage: snapshot --export <snapshot-name> [dest-dir]"
+        exit 1
+      fi
+      snapshot_export "$compose_dir" "$2" "${3:-}"
+      ;;
+    *)
+      local tag
+      tag="backup-$(date +%Y%m%d-%H%M%S)"
+      snapshot_take "$compose_dir" "$tag" "$@"
+      echo "To export: ./arcuscmd.sh snapshot --export $tag [dest-dir]"
+      echo "To clear:  ./arcuscmd.sh snapshot --clear $tag"
+      ;;
+  esac
+}
+
+function backup() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  local tag
+  tag="backup-$(date +%Y%m%d-%H%M%S)"
+  local dest_dir="./cassandra-backups"
+
+  snapshot_take "$compose_dir" "$tag" "$@"
+  snapshot_export "$compose_dir" "$tag" "$dest_dir"
+  snapshot_clear "$compose_dir" "$tag"
+}
+
 subcmd=${1:-help}
 
 case "$subcmd" in
@@ -601,6 +757,12 @@ repair)
   ;;
 upgradesstables)
   upgradesstables "${@:2}"
+  ;;
+snapshot)
+  snapshot "${@:2}"
+  ;;
+backup)
+  backup "${@:2}"
   ;;
 help)
   print_available
