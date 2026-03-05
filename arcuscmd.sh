@@ -38,7 +38,6 @@ else
   COMPOSE_CMD=""
 fi
 
-CASSANDRA_NODES=("cassandra-0" "cassandra-1" "cassandra-2")
 NODETOOL="/opt/cassandra/bin/nodetool"
 NODE_TIMEOUT=300
 
@@ -213,6 +212,11 @@ function get_container_ip() {
   "$RUNTIME" inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container"
 }
 
+function get_cassandra_nodes() {
+  local compose_dir="$1"
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null | grep -E '^cassandra-[0-9]+$' | sort
+}
+
 function wait_for_node() {
   local container="$1" node_ip="$2"
   local elapsed=0
@@ -272,13 +276,20 @@ function deploy() {
   fi
 
   # Default: rolling deploy of Cassandra nodes
+  local cassandra_nodes
+  cassandra_nodes=$(get_cassandra_nodes "$compose_dir")
+  if [[ -z "$cassandra_nodes" ]]; then
+    echo "No Cassandra nodes found in compose file."
+    return
+  fi
+
   echo "Starting rolling Cassandra deploy..."
   if [[ "$pull" == true ]]; then
     echo "Pulling Cassandra image..."
-    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" pull cassandra-0
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" pull "$(echo "$cassandra_nodes" | head -1)"
   fi
 
-  for node in "${CASSANDRA_NODES[@]}"; do
+  for node in $cassandra_nodes; do
     echo
     echo "--- Deploying $node ---"
 
@@ -505,8 +516,15 @@ function upgradesstables() {
   local compose_dir
   compose_dir=$(find_compose_dir)
 
+  local cassandra_nodes
+  cassandra_nodes=$(get_cassandra_nodes "$compose_dir")
+  if [[ -z "$cassandra_nodes" ]]; then
+    echo "No Cassandra nodes found in compose file."
+    return
+  fi
+
   echo "Running upgradesstables on all Cassandra nodes..."
-  for node in "${CASSANDRA_NODES[@]}"; do
+  for node in $cassandra_nodes; do
     local container
     container=$(get_container_name "$compose_dir" "$node")
     if [[ -z "$container" ]]; then
@@ -585,7 +603,7 @@ function snapshot_take() {
     echo "Taking snapshot '$tag' of all keyspaces..."
   fi
 
-  for node in "${CASSANDRA_NODES[@]}"; do
+  for node in $(get_cassandra_nodes "$compose_dir"); do
     local container
     container=$(get_container_name "$compose_dir" "$node")
     if [[ -z "$container" ]]; then
@@ -603,7 +621,7 @@ function snapshot_take() {
 function snapshot_list() {
   local compose_dir="$1"
 
-  for node in "${CASSANDRA_NODES[@]}"; do
+  for node in $(get_cassandra_nodes "$compose_dir"); do
     local container
     container=$(get_container_name "$compose_dir" "$node")
     if [[ -z "$container" ]]; then
@@ -629,7 +647,7 @@ function snapshot_clear() {
     echo "Clearing all snapshots on all nodes..."
   fi
 
-  for node in "${CASSANDRA_NODES[@]}"; do
+  for node in $(get_cassandra_nodes "$compose_dir"); do
     local container
     container=$(get_container_name "$compose_dir" "$node")
     if [[ -z "$container" ]]; then
@@ -650,7 +668,7 @@ function snapshot_export() {
   mkdir -p "$dest_dir"
   echo "Exporting snapshot '$name' to $dest_dir/"
 
-  for node in "${CASSANDRA_NODES[@]}"; do
+  for node in $(get_cassandra_nodes "$compose_dir"); do
     local container
     container=$(get_container_name "$compose_dir" "$node")
     if [[ -z "$container" ]]; then
