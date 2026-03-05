@@ -62,6 +62,9 @@ Operations:
   logs <svc>          Tail logs for a service
   shell <svc>         Open a shell on a service container
   dbshell             Open a Cassandra CQL shell
+  nodetool <cmd>      Run a nodetool command on cassandra-0
+                        -n <node>  Run on a specific node (e.g. -n cassandra-1)
+                        --all      Run on all Cassandra nodes
   repair [keyspace]   Trigger a manual Cassandra repair (all keyspaces if none specified)
   upgradesstables     Upgrade SSTables on all Cassandra nodes
   snapshot [keyspace]  Take a Cassandra snapshot on all nodes
@@ -511,6 +514,66 @@ function dbshell() {
   "$RUNTIME" exec -it "$container" /opt/cassandra/bin/cqlsh "$ip"
 }
 
+function run_nodetool() {
+  require_compose
+  local compose_dir
+  compose_dir=$(find_compose_dir)
+
+  local all=false
+  local target="cassandra-0"
+  local args=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --all)
+        all=true
+        shift
+        ;;
+      -n)
+        target="$2"
+        shift 2
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ ${#args[@]} -eq 0 ]]; then
+    echo "Usage: arcuscmd nodetool [--all | -n <node>] <command> [args...]"
+    exit 1
+  fi
+
+  local nodes
+  if [[ "$all" == true ]]; then
+    nodes=$(get_cassandra_nodes "$compose_dir")
+    if [[ -z "$nodes" ]]; then
+      echo "No Cassandra nodes found in compose file."
+      return
+    fi
+  else
+    nodes="$target"
+  fi
+
+  for node in $nodes; do
+    local container
+    container=$(get_container_name "$compose_dir" "$node")
+    if [[ -z "$container" ]]; then
+      echo "Error: $node is not running."
+      [[ "$all" == true ]] && continue || exit 1
+    fi
+
+    if [[ "$all" == true ]]; then
+      echo "--- $node ---"
+    fi
+    "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" "${args[@]}"
+    if [[ "$all" == true ]]; then
+      echo
+    fi
+  done
+}
+
 function upgradesstables() {
   require_compose
   local compose_dir
@@ -769,6 +832,9 @@ shell)
   ;;
 dbshell)
   dbshell
+  ;;
+nodetool)
+  run_nodetool "${@:2}"
   ;;
 repair)
   repair "${@:2}"
