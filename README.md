@@ -13,7 +13,7 @@ Docker Compose configuration for a 3-node highly-available Arcus Platform cluste
 # Pull latest changes
 ./arcuscmd.sh update
 
-# Rolling deploy of Cassandra nodes (one at a time, waits for UN status)
+# Rolling deploy of all services (Cassandra one node at a time, waits for UN status)
 ./arcuscmd.sh deploy
 
 # Deploy with fresh image pull

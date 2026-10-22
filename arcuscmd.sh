@@ -55,7 +55,7 @@ Status:
 Deploy:
   update              Pull latest changes and show what changed
   apply               Bring up all services (docker-compose up -d)
-  deploy [svc...]     Rolling deploy of services (default: all Cassandra nodes)
+  deploy [svc...]     Rolling deploy (default: all services, Cassandra one node at a time)
                         --pull  Pull images before restarting
 
 Operations:
@@ -239,6 +239,29 @@ function wait_for_node() {
   return 1
 }
 
+function wait_for_running() {
+  local compose_dir="$1" svc="$2"
+  local elapsed=0 container status
+
+  echo "  Waiting for $svc to be running..."
+  while [[ $elapsed -lt 60 ]]; do
+    sleep 5
+    elapsed=$((elapsed + 5))
+    container=$(get_container_name "$compose_dir" "$svc")
+    [[ -z "$container" ]] && continue
+    status=$("$RUNTIME" inspect -f '{{.State.Status}}' "$container" 2>/dev/null)
+    # Require a second consecutive running check so a crash-looping
+    # container isn't caught in a transient 'running' state
+    if [[ "$status" == "running" && $elapsed -ge 10 ]]; then
+      echo "  $svc is running after ${elapsed}s"
+      return 0
+    fi
+  done
+
+  echo "  WARNING: $svc is not running after 60s (status: ${status:-not found})"
+  return 1
+}
+
 function apply() {
   require_compose
   local compose_dir
@@ -279,18 +302,16 @@ function deploy() {
     return
   fi
 
-  # Default: rolling deploy of Cassandra nodes
-  local cassandra_nodes
+  # Default: rolling deploy of all services. Cassandra nodes go first, one
+  # at a time with UN checks; every other service follows one at a time.
+  local cassandra_nodes other_services
   cassandra_nodes=$(get_cassandra_nodes "$compose_dir")
-  if [[ -z "$cassandra_nodes" ]]; then
-    echo "No Cassandra nodes found in compose file."
-    return
-  fi
+  other_services=$($COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null | grep -vE '^cassandra-[0-9]+$')
 
-  echo "Starting rolling Cassandra deploy..."
+  echo "Starting rolling deploy of all services..."
   if [[ "$pull" == true ]]; then
-    echo "Pulling Cassandra image..."
-    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" pull "$(echo "$cassandra_nodes" | head -1)"
+    echo "Pulling images..."
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" pull
   fi
 
   for node in $cassandra_nodes; do
@@ -321,8 +342,23 @@ function deploy() {
     echo "--- $node deployed successfully ---"
   done
 
+  for svc in $other_services; do
+    echo
+    echo "--- Deploying $svc ---"
+
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps --force-recreate "$svc"
+
+    if ! wait_for_running "$compose_dir" "$svc"; then
+      echo "  Aborting deploy. Fix $svc before continuing."
+      exit 1
+    fi
+
+    echo "--- $svc deployed successfully ---"
+  done
+
   echo
-  echo "All Cassandra nodes deployed successfully."
+  echo "All services deployed successfully."
+  echo "Run './arcuscmd.sh check' to verify service health."
 }
 
 function check() {
