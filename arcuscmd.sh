@@ -40,6 +40,8 @@ fi
 
 NODETOOL="/opt/cassandra/bin/nodetool"
 NODE_TIMEOUT=300
+# Pause between Cassandra node restarts so hints drain and gossip settles
+NODE_SETTLE="${NODE_SETTLE:-30}"
 
 function print_available() {
   cat <<ENDOFDOC
@@ -238,8 +240,12 @@ function wait_for_node() {
 
   echo "  Waiting for $container to rejoin cluster..."
   while [[ $elapsed -lt $NODE_TIMEOUT ]]; do
-    if "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep "$node_ip" | grep -q "^UN"; then
-      echo "  Node $container is UN (Up/Normal) after ${elapsed}s"
+    # UN in its own gossip view is necessary but flips early; also require
+    # the native transport to be up before calling the node ready, since
+    # that's when it actually serves client queries again.
+    if "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep "$node_ip" | grep -q "^UN" \
+      && "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" info 2>/dev/null | grep -q "Native Transport active: true"; then
+      echo "  Node $container is UN with native transport active after ${elapsed}s"
       return 0
     fi
     sleep 10
@@ -398,6 +404,9 @@ function deploy() {
       echo "  Aborting deploy. Fix $node before continuing."
       exit 1
     fi
+
+    echo "  Letting the cluster settle for ${NODE_SETTLE}s..."
+    sleep "$NODE_SETTLE"
 
     echo "--- $node deployed successfully ---"
   done
