@@ -208,12 +208,14 @@ function find_compose_dir() {
 
 function get_container_name() {
   local compose_dir="$1" service="$2"
-  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" ps -q "$service" 2>/dev/null | head -1 | xargs "$RUNTIME" inspect --format '{{.Name}}' 2>/dev/null | sed 's|^/||'
+  # || true: with no running container the empty-input xargs fails, and under
+  # set -e/pipefail that would kill the caller instead of returning ""
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" ps -q "$service" 2>/dev/null | head -1 | xargs "$RUNTIME" inspect --format '{{.Name}}' 2>/dev/null | sed 's|^/||' || true
 }
 
 function get_container_ip() {
   local container="$1"
-  "$RUNTIME" inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container"
+  "$RUNTIME" inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container" 2>/dev/null || true
 }
 
 function get_cassandra_nodes() {
@@ -382,7 +384,7 @@ function check() {
     fi
 
     local status
-    status=$("$RUNTIME" inspect -f '{{.State.Status}}' "$container" 2>/dev/null)
+    status=$("$RUNTIME" inspect -f '{{.State.Status}}' "$container" 2>/dev/null || true)
     if [[ "$status" != "running" ]]; then
       echo "DOWN  $svc ($status)"
       failed=$((failed + 1))
@@ -394,14 +396,14 @@ function check() {
 
     # Service-specific reachability checks
     case "$svc" in
-      cassandra-repair)
+      cassandra-repair|cassandra-backup)
         echo "OK    $svc running"
         ;;
       cassandra-*)
         if "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status &>/dev/null; then
           local node_status
-          node_status=$("$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep "$ip" | awk '{print $1}')
-          echo "OK    $svc ($ip) cassandra=$node_status"
+          node_status=$("$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep "$ip" | awk '{print $1}' || true)
+          echo "OK    $svc ($ip) cassandra=${node_status:-unknown}"
         else
           echo "WARN  $svc ($ip) running but nodetool unreachable"
           failed=$((failed + 1))
@@ -409,7 +411,7 @@ function check() {
         ;;
       zookeeper-*)
         local zk_mode
-        zk_mode=$("$RUNTIME" exec "$container" zkServer.sh status 2>&1 | grep "Mode:" | awk '{print $2}')
+        zk_mode=$("$RUNTIME" exec "$container" zkServer.sh status 2>&1 | grep "Mode:" | awk '{print $2}' || true)
         if [[ -n "$zk_mode" ]]; then
           echo "OK    $svc ($ip) zookeeper=$zk_mode"
         else
