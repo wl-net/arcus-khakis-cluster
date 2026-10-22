@@ -1,143 +1,63 @@
 services:
   cassandra-0:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
+    extends:
+      file: ../../compose/common.yml
+      service: cassandra
     environment:
-    - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
-    - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
-    - CASSANDRA_DC=DC2
-    - MAX_HEAP_SIZE=768M
-    - HEAP_NEWSIZE=256M
-    ports:
-    - 7000
-    - 7001
-    - 7199
-    - 9042
-    - 9160
-    tmpfs:
-    - /var/log/cassandra
+      CASSANDRA_SEEDS: 192.168.1.10,cassandra-0
+      CASSANDRA_DC: DC2
     volumes:
     - cassandra-storage-0:/data
     networks:
       arcus:
         ipv4_address: 192.168.2.10
-    restart: always
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        window: 120s
-    logging:
-      options:
-        max-size: 50m
   cassandra-1:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
+    extends:
+      file: ../../compose/common.yml
+      service: cassandra
     environment:
-    - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
-    - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
-    - CASSANDRA_DC=DC2
-    - MAX_HEAP_SIZE=768M
-    - HEAP_NEWSIZE=256M
-    ports:
-    - 7000
-    - 7001
-    - 7199
-    - 9042
-    - 9160
-    tmpfs:
-    - /var/log/cassandra
+      CASSANDRA_SEEDS: 192.168.1.10,cassandra-0
+      CASSANDRA_DC: DC2
     volumes:
     - cassandra-storage-1:/data
     networks:
       arcus:
         ipv4_address: 192.168.2.11
-    restart: always
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        window: 120s
-    logging:
-      options:
-        max-size: 50m
   cassandra-2:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
+    extends:
+      file: ../../compose/common.yml
+      service: cassandra
     environment:
-    - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
-    - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
-    - CASSANDRA_DC=DC2
-    - MAX_HEAP_SIZE=768M
-    - HEAP_NEWSIZE=256M
-    ports:
-    - 7000
-    - 7001
-    - 7199
-    - 9042
-    - 9160
-    tmpfs:
-    - /var/log/cassandra
+      CASSANDRA_SEEDS: 192.168.1.10,cassandra-0
+      CASSANDRA_DC: DC2
     volumes:
     - cassandra-storage-2:/data
     networks:
       arcus:
         ipv4_address: 192.168.2.12
-    restart: always
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        window: 120s
-    logging:
-      options:
-        max-size: 50m
   zookeeper-0:
-    image: zookeeper:3.8.6
+    extends:
+      file: ../../compose/common.yml
+      service: zookeeper
     environment:
       ZOO_MY_ID: 2
-      ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181 server.3=192.168.3.13:2888:3888;2181
-    ports:
-    - 2181
-    volumes:
-    - zookeeper-0:/data
     networks:
       arcus:
         ipv4_address: 192.168.2.13
-    restart: always
   cassandra-repair:
-    image: docker:cli
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ../../repair:/repair:ro
-    entrypoint: /repair/entrypoint.sh
+    extends:
+      file: ../../compose/common.yml
+      service: cassandra-repair
     environment:
-    - REPAIR_HOUR=6
-    restart: always
-    logging:
-      options:
-        max-size: 50m
+      REPAIR_HOUR: 6
   kafka-0:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:2026.10.2
+    extends:
+      file: ../../compose/common.yml
+      service: kafka
     environment:
-      ZOOKEEPER: zookeeper-0:2181
-      ZOOKEEPEROPS: zookeeper-0:2181
-      KAFKA_HSIZE: 512
       KAFKA_BROKER_ID: 2
       ADVERTISED_HSTN: 192.168.2.14
-      KAFAOPS_METRICS_LOG_RETENTION_BYTES: 1073741824
-      KAFKA_LOG_SEGMENT_BYTES: 10485760
-      KAFAOPS_METRICS_LOG_RETENTION_MS: 3600000
-      KAFKA_LOG_RETENTION_BYTES: 1073741824
-      KAFKA_LOG_RETENTION_MS: 3600000
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_BROKER_RACK: dc2
-      KAFKA_REPLICATOR_SELECTOR_CLASS: org.apache.kafka.common.replica.RackAwareReplicaSelector
-      KAFKA_PROTOCOL_VERSION: 2.6
-      KAFKA_LOG_MESSAGE_VERSION: 2.6
-      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
-    restart: on-failure
-    ports:
-    - 9092
-    volumes:
-    - kafka-0:/data
     networks:
       arcus:
         ipv4_address: 192.168.2.14

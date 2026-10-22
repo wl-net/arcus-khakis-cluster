@@ -16,6 +16,26 @@ jobs:
       - name: Run shellcheck
         run: shellcheck -x arcuscmd.sh repair/cassandra-repair.sh repair/entrypoint.sh
 
+  compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose files
+        run: |
+          for dc in dc1 dc2 dc3; do
+            echo "::group::$dc"
+            docker compose -f "$dc/arcus-khakis-cluster/docker-compose.yml" config
+            echo "::endgroup::"
+          done
+      - name: DC1 and DC2 resolve identically apart from DC specifics
+        run: |
+          for dc in dc1 dc2; do
+            docker compose -f "$dc/arcus-khakis-cluster/docker-compose.yml" config \
+              | sed -E 's/192\.168\.[12]\./192.168.N./g; s/: DC[12]$/: DCN/; s/: dc[12]$/: dcN/' \
+              | grep -vE 'ZOO_MY_ID|KAFKA_BROKER_ID|REPAIR_HOUR|CASSANDRA_SEEDS' > "/tmp/$dc-normalized.yml"
+          done
+          diff -u /tmp/dc1-normalized.yml /tmp/dc2-normalized.yml
+
   cli:
     runs-on: ubuntu-latest
     steps:

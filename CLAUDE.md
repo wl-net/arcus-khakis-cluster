@@ -8,10 +8,13 @@ Docker Compose configurations for a 3-node highly-available Arcus Platform clust
 arcuscmd.sh                                  # CLI tool for managing the cluster
 repair/cassandra-repair.sh                   # Automated Cassandra repair script
 repair/entrypoint.sh                         # Sleep-loop scheduler for daily repairs
+compose/common.yml                           # Shared service definitions (extended by each DC)
 dc1/arcus-khakis-cluster/docker-compose.yml  # DC1: full services (Cassandra, Kafka, Zookeeper)
 dc2/arcus-khakis-cluster/docker-compose.yml  # DC2: full services (Cassandra, Kafka, Zookeeper)
 dc3/arcus-khakis-cluster/docker-compose.yml  # DC3: quorum only (Cassandra, Zookeeper, no Kafka)
 ```
+
+Common service config (images, heap, ports, logging, Kafka tuning) lives in `compose/common.yml`; each DC's compose file `extends` it and overrides only DC-specific values (IPs, seeds, DC name, broker/ZK IDs, repair hour). Edit `compose/common.yml` for cluster-wide changes.
 
 ## Network Layout
 

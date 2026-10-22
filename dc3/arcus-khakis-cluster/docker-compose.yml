@@ -1,17 +1,13 @@
 services:
   zookeeper-0:
-    image: zookeeper:3.8.6
+    extends:
+      file: ../../compose/common.yml
+      service: zookeeper
     environment:
       ZOO_MY_ID: 3
-      ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181 server.3=192.168.3.13:2888:3888;2181
-    ports:
-    - 2181
-    volumes:
-    - zookeeper-0:/data
     networks:
       arcus:
         ipv4_address: 192.168.3.13
-    restart: always
 
 volumes:
   cassandra-storage-0:

@@ -1,0 +1,70 @@
+# Shared service definitions for all DCs. The per-DC compose files extend
+# these and override only what differs between DCs: addresses, identities,
+# seeds, and schedules. This file is not a valid project on its own.
+services:
+  cassandra:
+    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
+    environment:
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      MAX_HEAP_SIZE: 768M
+      HEAP_NEWSIZE: 256M
+    ports:
+    - 7000
+    - 7001
+    - 7199
+    - 9042
+    - 9160
+    tmpfs:
+    - /var/log/cassandra
+    restart: always
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        window: 120s
+    logging:
+      options:
+        max-size: 50m
+
+  zookeeper:
+    image: zookeeper:3.8.6
+    environment:
+      ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181 server.3=192.168.3.13:2888:3888;2181
+    ports:
+    - 2181
+    volumes:
+    - zookeeper-0:/data
+    restart: always
+
+  cassandra-repair:
+    image: docker:cli
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ../repair:/repair:ro
+    entrypoint: /repair/entrypoint.sh
+    restart: always
+    logging:
+      options:
+        max-size: 50m
+
+  kafka:
+    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:2026.10.2
+    environment:
+      ZOOKEEPER: zookeeper-0:2181
+      ZOOKEEPEROPS: zookeeper-0:2181
+      KAFKA_HSIZE: 512
+      KAFAOPS_METRICS_LOG_RETENTION_BYTES: 1073741824
+      KAFKA_LOG_SEGMENT_BYTES: 10485760
+      KAFAOPS_METRICS_LOG_RETENTION_MS: 3600000
+      KAFKA_LOG_RETENTION_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_MS: 3600000
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_REPLICATOR_SELECTOR_CLASS: org.apache.kafka.common.replica.RackAwareReplicaSelector
+      KAFKA_PROTOCOL_VERSION: 2.6
+      KAFKA_LOG_MESSAGE_VERSION: 2.6
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+    restart: on-failure
+    ports:
+    - 9092
+    volumes:
+    - kafka-0:/data
