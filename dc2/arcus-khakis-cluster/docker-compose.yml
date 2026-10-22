@@ -70,8 +70,6 @@ volumes:
   kafka-0:
 
 networks:
-  private:
-
   arcus:
     driver: macvlan
     driver_opts:

@@ -15,8 +15,6 @@ volumes:
   cassandra-storage-2:
   zookeeper-0:
 networks:
-  private:
-
   arcus:
     driver: macvlan
     driver_opts:
