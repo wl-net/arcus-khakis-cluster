@@ -113,3 +113,5 @@ Each DC uses a macvlan network on parent interface `br0`:
 | DC1 | 192.168.1.0/24 |
 | DC2 | 192.168.2.0/24 |
 | DC3 | 192.168.3.0/24 |
+
+Cross-DC traffic relies on host-level setup that isn't in this repo: OpenVPN TAP tunnels between sites, a `mac0` shim holding each DC's gateway, and ufw routed rules. See [docs/host-networking.md](docs/host-networking.md).

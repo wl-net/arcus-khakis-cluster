@@ -20,8 +20,10 @@ Each DC uses a macvlan network on parent interface `br0`:
 | DC  | Subnet           | Cassandra nodes          | Kafka       | Zookeeper    |
 |-----|------------------|--------------------------|-------------|--------------|
 | DC1 | 192.168.1.0/24   | .10, .11, .12            | .14         | .13          |
-| DC2 | 192.168.2.0/24   | .10, .11, .12            | .13         | .14          |
+| DC2 | 192.168.2.0/24   | .10, .11, .12            | .14         | .13          |
 | DC3 | 192.168.3.0/24   | .10, .11, .12            | (none)      | .13          |
+
+Cross-DC connectivity depends on host setup outside this repo (OpenVPN TAP tunnels, the `mac0` gateway shim, ufw routed rules). See `docs/host-networking.md`.
 
 ## Key Details
 
