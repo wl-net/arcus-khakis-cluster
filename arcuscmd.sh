@@ -240,21 +240,33 @@ function wait_for_node() {
   local container="$1" node_ip="$2"
   local elapsed=0
 
+  local status_out state reason=""
   echo "  Waiting for $container to rejoin cluster..."
   while [[ $elapsed -lt $NODE_TIMEOUT ]]; do
     # UN in its own gossip view is necessary but flips early; also require
     # the native transport to be up before calling the node ready, since
     # that's when it actually serves client queries again.
-    if "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep "$node_ip" | grep -q "^UN" \
-      && "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" info 2>/dev/null | grep -q "Native Transport active: true"; then
-      echo "  Node $container is UN with native transport active after ${elapsed}s"
-      return 0
+    if ! status_out=$("$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null); then
+      reason="nodetool not responding yet"
+    else
+      state=$(echo "$status_out" | grep "$node_ip" | awk '{print $1}' || true)
+      if [[ "$state" != "UN" ]]; then
+        reason="node state is ${state:-not in ring}, want UN"
+      elif ! "$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" info 2>/dev/null | grep -q "Native Transport active: true"; then
+        reason="native transport not active yet"
+      else
+        echo "  Node $container is UN with native transport active after ${elapsed}s"
+        return 0
+      fi
+    fi
+    if [[ $elapsed -gt 0 && $((elapsed % 60)) -eq 0 ]]; then
+      echo "  Still waiting (${elapsed}s): $reason"
     fi
     sleep 10
     elapsed=$((elapsed + 10))
   done
 
-  echo "  WARNING: Node $container did not reach UN status within ${NODE_TIMEOUT}s"
+  echo "  WARNING: Node $container not ready within ${NODE_TIMEOUT}s (last: $reason)"
   return 1
 }
 
