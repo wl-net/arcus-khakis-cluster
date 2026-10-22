@@ -1,6 +1,10 @@
 # Shared service definitions for all DCs. The per-DC compose files extend
 # these and override only what differs between DCs: addresses, identities,
 # seeds, and schedules. This file is not a valid project on its own.
+x-logging: &default-logging
+  options:
+    max-size: 50m
+
 services:
   cassandra:
     image: ghcr.io/wl-net/arcusplatform/arcus-cassandra:2026.10.2
@@ -17,14 +21,7 @@ services:
     tmpfs:
     - /var/log/cassandra
     restart: always
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        window: 120s
-    logging:
-      options:
-        max-size: 50m
+    logging: *default-logging
 
   zookeeper:
     image: zookeeper:3.8.7
@@ -35,9 +32,7 @@ services:
     volumes:
     - zookeeper-0:/data
     restart: always
-    logging:
-      options:
-        max-size: 50m
+    logging: *default-logging
 
   cassandra-repair:
     image: docker:cli
@@ -46,9 +41,7 @@ services:
     - ../repair:/repair:ro
     entrypoint: /repair/entrypoint.sh
     restart: always
-    logging:
-      options:
-        max-size: 50m
+    logging: *default-logging
 
   cassandra-backup:
     image: docker:cli
@@ -58,9 +51,7 @@ services:
     - /var/backups/arcus-khakis-cluster:/backups
     entrypoint: /backup/entrypoint.sh
     restart: always
-    logging:
-      options:
-        max-size: 50m
+    logging: *default-logging
 
   kafka:
     image: ghcr.io/wl-net/arcusplatform/arcus-kafka:2026.10.2
@@ -83,6 +74,4 @@ services:
     - 9092
     volumes:
     - kafka-0:/data
-    logging:
-      options:
-        max-size: 50m
+    logging: *default-logging
