@@ -122,7 +122,8 @@ function detect_dc() {
   for dc in "${DCS[@]}"; do
     local dir="$ROOT/$dc/arcus-khakis-cluster"
     if [[ -f "$dir/docker-compose.yml" ]]; then
-      container_id=$($COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q cassandra-0 2>/dev/null | head -1)
+      # Probe zookeeper-0: it's the one service every DC runs (DC3 has no Cassandra)
+      container_id=$($COMPOSE_CMD -f "$dir/docker-compose.yml" ps -q zookeeper-0 2>/dev/null | head -1)
       if [[ -n "$container_id" ]]; then
         break
       fi

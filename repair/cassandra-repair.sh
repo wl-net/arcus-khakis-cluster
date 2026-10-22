@@ -1,8 +1,11 @@
 #!/bin/sh
 
 # Max seconds for one keyspace repair on one node before giving up, so a
-# hung repair can't wedge the daily schedule.
+# hung repair can't wedge the daily schedule. timeout exits 124 (GNU) or
+# 143 (busybox, SIGTERM) on expiry.
 REPAIR_TIMEOUT="${REPAIR_TIMEOUT:-7200}"
+# Max seconds for keyspace discovery against a half-up node.
+DISCOVER_TIMEOUT="${DISCOVER_TIMEOUT:-300}"
 
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [repair] $*"
@@ -26,7 +29,7 @@ else
   FIRST_NODE_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$FIRST_NODE")
   log "Discovering keyspaces from $FIRST_NODE ($FIRST_NODE_IP)..."
 
-  KEYSPACES=$(docker exec "$FIRST_NODE" /opt/cassandra/bin/cqlsh "$FIRST_NODE_IP" -e "DESCRIBE KEYSPACES" 2>/dev/null | tr -s ' \n' '\n' | grep -v -E '^(system|system_auth|system_distributed|system_schema|system_traces|system_views|system_virtual_schema)$' | grep -v '^$' | sort)
+  KEYSPACES=$(timeout "$DISCOVER_TIMEOUT" docker exec "$FIRST_NODE" /opt/cassandra/bin/cqlsh "$FIRST_NODE_IP" -e "DESCRIBE KEYSPACES" 2>/dev/null | tr -s ' \n' '\n' | grep -v -E '^(system|system_auth|system_distributed|system_schema|system_traces|system_views|system_virtual_schema)$' | grep -v '^$' | sort)
 
   if [ -z "$KEYSPACES" ]; then
     log "ERROR: No non-system keyspaces found"
@@ -47,8 +50,19 @@ for CONTAINER in $CONTAINERS; do
       log "Completed repair of '$KS' on $CONTAINER"
     else
       RC=$?
-      if [ "$RC" -eq 124 ]; then
-        log "WARNING: Repair of '$KS' on $CONTAINER timed out after ${REPAIR_TIMEOUT}s, continuing..."
+      if [ "$RC" -eq 124 ] || [ "$RC" -eq 143 ]; then
+        log "WARNING: Repair of '$KS' on $CONTAINER timed out after ${REPAIR_TIMEOUT}s"
+        # The timeout only kills the docker exec client; the repair session
+        # keeps running inside the node and would collide with the next one.
+        # Cancel it server-side: repair_admin on Cassandra 4+, stop
+        # VALIDATION as the 3.x fallback.
+        if timeout 60 docker exec "$CONTAINER" /opt/cassandra/bin/nodetool -h "::ffff:127.0.0.1" repair_admin cancel --all 2>/dev/null; then
+          log "Cancelled server-side repair sessions on $CONTAINER"
+        elif timeout 60 docker exec "$CONTAINER" /opt/cassandra/bin/nodetool -h "::ffff:127.0.0.1" stop VALIDATION 2>/dev/null; then
+          log "Stopped server-side validation on $CONTAINER"
+        else
+          log "WARNING: Could not cancel server-side repair on $CONTAINER; later repairs on this node may collide"
+        fi
       else
         log "WARNING: Repair of '$KS' on $CONTAINER failed (exit code $RC), continuing..."
       fi
