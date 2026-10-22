@@ -24,7 +24,7 @@ services:
     - type: tmpfs
       target: /var/log/cassandra
       tmpfs:
-        size: 67108864 # 64 MiB
+        size: 134217728 # 128 MiB (startup logging alone reaches ~52 MiB)
     ulimits:
       memlock: -1
       nofile: 100000
