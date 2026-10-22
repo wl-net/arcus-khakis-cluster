@@ -54,9 +54,9 @@ CLI tool for managing the cluster. Detects docker vs podman automatically.
 - `check` — Verify all containers are running and reachable (Cassandra UN, Zookeeper mode, etc.)
 - `update` — Git pull with fast-forward, show changes
 - `apply` — Bring up all services (`docker-compose up -d`), verifies cached DC is still correct
-- `deploy` — Rolling deploy of all services (Cassandra one node at a time waiting for UN, then each other service with a running check)
+- `deploy` — Rolling deploy of all services; only recreates containers whose image/config changed (Cassandra one node at a time waiting for UN, then each other service with a running check)
 - `deploy --pull` — Same but pulls images first
-- `deploy <svc>` — Deploy a specific service without health checks
+- `deploy <svc>` — Deploy a specific service without health checks (always recreates, even if unchanged)
 - `logs <svc>` — Tail logs for a service
 - `shell <svc>` — Open a shell on a service container
 - `dbshell` — Open `cqlsh` on cassandra-0

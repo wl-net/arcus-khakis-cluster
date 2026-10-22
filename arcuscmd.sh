@@ -55,7 +55,9 @@ Status:
 Deploy:
   update              Pull latest changes and show what changed
   apply               Bring up all services (docker-compose up -d)
-  deploy [svc...]     Rolling deploy (default: all services, Cassandra one node at a time)
+  deploy [svc...]     Rolling deploy of changed services (Cassandra one node at a time);
+                      unchanged services are skipped. Named services are always
+                      recreated, without health checks.
                         --pull  Pull images before restarting
 
 Operations:
@@ -206,6 +208,11 @@ function find_compose_dir() {
   exit 1
 }
 
+function get_container_id() {
+  local compose_dir="$1" service="$2"
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" ps -q "$service" 2>/dev/null | head -1 || true
+}
+
 function get_container_name() {
   local compose_dir="$1" service="$2"
   # || true: with no running container the empty-input xargs fails, and under
@@ -316,11 +323,21 @@ function deploy() {
     $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" pull
   fi
 
+  # Recreate only services whose image or config changed ('up -d' detects
+  # this); unchanged services are left alone so deploy is idempotent.
+  local before after
   for node in $cassandra_nodes; do
     echo
     echo "--- Deploying $node ---"
 
-    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps --force-recreate "$node"
+    before=$(get_container_id "$compose_dir" "$node")
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps "$node"
+    after=$(get_container_id "$compose_dir" "$node")
+
+    if [[ -n "$before" && "$before" == "$after" ]]; then
+      echo "--- $node unchanged, skipping ---"
+      continue
+    fi
 
     local container
     container=$(get_container_name "$compose_dir" "$node")
@@ -348,7 +365,14 @@ function deploy() {
     echo
     echo "--- Deploying $svc ---"
 
-    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps --force-recreate "$svc"
+    before=$(get_container_id "$compose_dir" "$svc")
+    $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps "$svc"
+    after=$(get_container_id "$compose_dir" "$svc")
+
+    if [[ -n "$before" && "$before" == "$after" ]]; then
+      echo "--- $svc unchanged, skipping ---"
+      continue
+    fi
 
     if ! wait_for_running "$compose_dir" "$svc"; then
       echo "  Aborting deploy. Fix $svc before continuing."
