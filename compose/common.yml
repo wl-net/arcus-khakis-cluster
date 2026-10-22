@@ -35,6 +35,9 @@ services:
     volumes:
     - zookeeper-0:/data
     restart: always
+    logging:
+      options:
+        max-size: 50m
 
   cassandra-repair:
     image: docker:cli
@@ -63,8 +66,11 @@ services:
       KAFKA_PROTOCOL_VERSION: 2.6
       KAFKA_LOG_MESSAGE_VERSION: 2.6
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
-    restart: on-failure
+    restart: always
     ports:
     - 9092
     volumes:
     - kafka-0:/data
+    logging:
+      options:
+        max-size: 50m

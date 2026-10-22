@@ -73,24 +73,20 @@ Runs all services (Kafka, Zookeeper, and Cassandra) alongside Arcus Platform. Re
 
 ### DC3
 
-Runs minimal services (Zookeeper and Cassandra) for quorum only — no Kafka. Requires 2GB of RAM and 10GB or more of disk space.
+Runs Zookeeper only, as the ensemble tiebreaker — no Cassandra, no Kafka. Requires 1GB of RAM and minimal disk space.
 
 | Service | IP Address |
 |---|---|
-| cassandra-0 | 192.168.3.10 |
-| cassandra-1 | 192.168.3.11 |
-| cassandra-2 | 192.168.3.12 |
 | zookeeper-0 | 192.168.3.13 |
 
 ## Automated Cassandra Repair
 
-Each DC includes a `cassandra-repair` service that runs daily repairs, staggered across DCs:
+DC1 and DC2 each include a `cassandra-repair` service that runs daily repairs, staggered across DCs:
 
 | DC | Repair Time (UTC) |
 |---|---|
 | DC1 | 02:00 |
 | DC2 | 06:00 |
-| DC3 | 10:00 |
 
 Repairs run sequentially per node within each DC using `nodetool repair -pr`. Logs are captured by the Docker logging driver:
 

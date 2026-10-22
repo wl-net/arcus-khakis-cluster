@@ -1,5 +1,8 @@
 #!/bin/sh
-set -e
+
+# Max seconds for one keyspace repair on one node before giving up, so a
+# hung repair can't wedge the daily schedule.
+REPAIR_TIMEOUT="${REPAIR_TIMEOUT:-7200}"
 
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [repair] $*"
@@ -34,19 +37,31 @@ fi
 log "Keyspaces to repair: $(echo "$KEYSPACES" | tr '\n' ' ')"
 
 # Repair each node sequentially
+FAILURES=0
 for CONTAINER in $CONTAINERS; do
   log "--- Starting repairs on $CONTAINER ---"
 
   for KS in $KEYSPACES; do
     log "Repairing keyspace '$KS' on $CONTAINER..."
-    if docker exec "$CONTAINER" /opt/cassandra/bin/nodetool -h "::ffff:127.0.0.1" repair "$KS" -pr; then
+    if timeout "$REPAIR_TIMEOUT" docker exec "$CONTAINER" /opt/cassandra/bin/nodetool -h "::ffff:127.0.0.1" repair "$KS" -pr; then
       log "Completed repair of '$KS' on $CONTAINER"
     else
-      log "WARNING: Repair of '$KS' on $CONTAINER failed (exit code $?), continuing..."
+      RC=$?
+      if [ "$RC" -eq 124 ]; then
+        log "WARNING: Repair of '$KS' on $CONTAINER timed out after ${REPAIR_TIMEOUT}s, continuing..."
+      else
+        log "WARNING: Repair of '$KS' on $CONTAINER failed (exit code $RC), continuing..."
+      fi
+      FAILURES=$((FAILURES + 1))
     fi
   done
 
   log "--- Finished repairs on $CONTAINER ---"
 done
+
+if [ "$FAILURES" -gt 0 ]; then
+  log "Repairs finished with $FAILURES failure(s)"
+  exit 1
+fi
 
 log "All repairs complete"
