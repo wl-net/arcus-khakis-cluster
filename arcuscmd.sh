@@ -386,18 +386,23 @@ function deploy() {
       continue
     fi
 
+    # Treat "can't verify" as failure: continuing past an unverifiable node
+    # would keep bouncing the remaining nodes with a potentially broken
+    # image and could take the whole DC down.
     local container
     container=$(get_container_name "$compose_dir" "$node")
     if [[ -z "$container" ]]; then
-      echo "  WARNING: Could not find container for $node, skipping health check"
-      continue
+      echo "  ERROR: Could not find container for $node (crashed on start?)."
+      echo "  Aborting deploy. Fix $node before continuing."
+      exit 1
     fi
 
     local ip
     ip=$(get_container_ip "$container")
     if [[ -z "$ip" ]]; then
-      echo "  WARNING: Could not determine IP for $container, skipping health check"
-      continue
+      echo "  ERROR: Could not determine IP for $container (not running?)."
+      echo "  Aborting deploy. Fix $node before continuing."
+      exit 1
     fi
 
     if ! wait_for_node "$container" "$ip"; then
