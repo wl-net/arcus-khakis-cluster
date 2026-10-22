@@ -233,7 +233,9 @@ function get_container_ip() {
 
 function get_cassandra_nodes() {
   local compose_dir="$1"
-  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null | grep -E '^cassandra-[0-9]+$' | sort
+  # || true: on a DC with no Cassandra services (DC3) the empty grep would
+  # otherwise kill the caller via errexit/pipefail
+  $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" config --services 2>/dev/null | grep -E '^cassandra-[0-9]+$' | sort || true
 }
 
 function wait_for_node() {
