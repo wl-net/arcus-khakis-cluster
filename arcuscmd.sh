@@ -39,7 +39,9 @@ else
 fi
 
 NODETOOL="/opt/cassandra/bin/nodetool"
-NODE_TIMEOUT=300
+# Max seconds to wait for a restarted node to serve again; raise for slow
+# starts (commitlog replay, major version upgrades): NODE_TIMEOUT=1800 deploy
+NODE_TIMEOUT="${NODE_TIMEOUT:-300}"
 # Pause between Cassandra node restarts so hints drain and gossip settles
 NODE_SETTLE="${NODE_SETTLE:-30}"
 
