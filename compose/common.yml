@@ -3,7 +3,7 @@
 # seeds, and schedules. This file is not a valid project on its own.
 services:
   cassandra:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
+    image: ghcr.io/wl-net/arcusplatform/arcus-cassandra:2026.10.2
     environment:
       CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
       MAX_HEAP_SIZE: 768M
@@ -63,7 +63,7 @@ services:
         max-size: 50m
 
   kafka:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:2026.10.2
+    image: ghcr.io/wl-net/arcusplatform/arcus-kafka:2026.10.2
     environment:
       ZOOKEEPER: zookeeper-0:2181
       ZOOKEEPEROPS: zookeeper-0:2181

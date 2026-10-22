@@ -32,7 +32,7 @@ Cross-DC connectivity depends on host setup outside this repo (OpenVPN TAP tunne
 
 ## Key Details
 
-- **Images**: Arcus custom images from `us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/`
+- **Images**: Arcus custom images from `ghcr.io/wl-net/arcusplatform/` (built from the wl-net/arcusplatform repo)
 - **Zookeeper**: `zookeeper:3.8.6`, ensemble across all 3 DCs (`ZOO_MY_ID` 1/2/3)
 - **Cassandra DC**: DC1 and DC2 each run three nodes with their own DC name and `GossipingPropertyFileSnitch`
 - **Cassandra seeds**: DC1/DC2 nodes seed from each other's `192.168.x.10`
