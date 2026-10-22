@@ -8,6 +8,8 @@ Docker Compose configurations for a 3-node highly-available Arcus Platform clust
 arcuscmd.sh                                  # CLI tool for managing the cluster
 repair/cassandra-repair.sh                   # Automated Cassandra repair script
 repair/entrypoint.sh                         # Sleep-loop scheduler for daily repairs
+backup/cassandra-backup.sh                   # Weekly Cassandra backup script (schema + snapshots)
+backup/entrypoint.sh                         # Sleep-loop scheduler for weekly backups
 compose/common.yml                           # Shared service definitions (extended by each DC)
 dc1/arcus-khakis-cluster/docker-compose.yml  # DC1: full services (Cassandra, Kafka, Zookeeper)
 dc2/arcus-khakis-cluster/docker-compose.yml  # DC2: full services (Cassandra, Kafka, Zookeeper)
@@ -70,3 +72,7 @@ DC1 and DC2 each run a `cassandra-repair` service (`docker:cli` image) on a dail
 | DC2 | 6 |
 
 The repair script discovers keyspaces via `cqlsh` and runs `nodetool repair -pr` sequentially on each node.
+
+## Automated Backups
+
+DC1 and DC2 each run a `cassandra-backup` service (weekly: DC1 Sunday 12:00 UTC, DC2 Sunday 16:00 UTC) that dumps the schema, snapshots every local node, exports tarballs to `/var/backups/arcus-khakis-cluster/` on the host, and prunes after `BACKUP_RETAIN_DAYS` (28). Hosts hold no offsite credentials — an external system pulls the files. See `docs/backups.md`.

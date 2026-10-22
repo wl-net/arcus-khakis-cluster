@@ -14,7 +14,7 @@ jobs:
       - name: Install shellcheck
         run: sudo apt-get install -y shellcheck
       - name: Run shellcheck
-        run: shellcheck -x arcuscmd.sh repair/cassandra-repair.sh repair/entrypoint.sh
+        run: shellcheck -x arcuscmd.sh repair/cassandra-repair.sh repair/entrypoint.sh backup/cassandra-backup.sh backup/entrypoint.sh
 
   compose-validate:
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
           for dc in dc1 dc2; do
             docker compose -f "$dc/arcus-khakis-cluster/docker-compose.yml" config \
               | sed -E 's/192\.168\.[12]\./192.168.N./g; s/: DC[12]$/: DCN/; s/: dc[12]$/: dcN/' \
-              | grep -vE 'ZOO_MY_ID|KAFKA_BROKER_ID|REPAIR_HOUR|CASSANDRA_SEEDS' > "/tmp/$dc-normalized.yml"
+              | grep -vE 'ZOO_MY_ID|KAFKA_BROKER_ID|REPAIR_HOUR|BACKUP_DAY|BACKUP_HOUR|CASSANDRA_SEEDS' > "/tmp/$dc-normalized.yml"
           done
           diff -u /tmp/dc1-normalized.yml /tmp/dc2-normalized.yml
 

@@ -50,6 +50,13 @@ services:
       service: cassandra-repair
     environment:
       REPAIR_HOUR: 2
+  cassandra-backup:
+    extends:
+      file: ../../compose/common.yml
+      service: cassandra-backup
+    environment:
+      BACKUP_DAY: 0
+      BACKUP_HOUR: 12
   kafka-0:
     extends:
       file: ../../compose/common.yml

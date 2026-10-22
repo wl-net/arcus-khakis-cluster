@@ -100,6 +100,21 @@ To trigger a manual repair:
 ./arcuscmd.sh repair
 ```
 
+## Automated Backups
+
+DC1 and DC2 each include a `cassandra-backup` service that takes a weekly
+backup (schema dump + snapshot export) to `/var/backups/arcus-khakis-cluster/`
+on the host, pruning anything older than 28 days:
+
+| DC | Backup Time (UTC) |
+|---|---|
+| DC1 | Sunday 12:00 |
+| DC2 | Sunday 16:00 |
+
+The hosts hold no offsite credentials; a separate backup system pulls the
+tarballs off. See [docs/backups.md](docs/backups.md) for details and the
+restore procedure.
+
 ## Network
 
 Each DC uses a macvlan network on parent interface `br0`:

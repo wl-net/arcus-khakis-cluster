@@ -50,6 +50,18 @@ services:
       options:
         max-size: 50m
 
+  cassandra-backup:
+    image: docker:cli
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ../backup:/backup:ro
+    - /var/backups/arcus-khakis-cluster:/backups
+    entrypoint: /backup/entrypoint.sh
+    restart: always
+    logging:
+      options:
+        max-size: 50m
+
   kafka:
     image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:2026.10.2
     environment:
