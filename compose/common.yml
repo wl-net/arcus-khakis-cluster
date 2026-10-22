@@ -38,6 +38,9 @@ services:
     image: zookeeper:3.8.7
     environment:
       ZOO_SERVERS: server.1=192.168.1.13:2888:3888;2181 server.2=192.168.2.13:2888:3888;2181 server.3=192.168.3.13:2888:3888;2181
+      # The image default (2 ticks = 4s) is LAN tuning: any 4s blip on a VPN
+      # tunnel drops the follower and forces an election
+      ZOO_SYNC_LIMIT: 10
     ports:
     - 2181
     volumes:
@@ -70,8 +73,11 @@ services:
   kafka:
     image: ghcr.io/wl-net/arcusplatform/arcus-kafka:2026.10.2
     environment:
-      ZOOKEEPER: zookeeper-0:2181
-      ZOOKEEPEROPS: zookeeper-0:2181
+      # All three ensemble members: pinned to the local member alone, the
+      # broker's session expires whenever that one server blips instead of
+      # failing over and keeping its registration
+      ZOOKEEPER: 192.168.1.13:2181,192.168.2.13:2181,192.168.3.13:2181
+      ZOOKEEPEROPS: 192.168.1.13:2181,192.168.2.13:2181,192.168.3.13:2181
       KAFKA_HSIZE: 512
       KAFAOPS_METRICS_LOG_RETENTION_BYTES: 1073741824
       KAFKA_LOG_SEGMENT_BYTES: 10485760
