@@ -18,8 +18,19 @@ services:
     - 7199
     - 9042
     - 9160
-    tmpfs:
-    - /var/log/cassandra
+    volumes:
+    # Logs on tmpfs (image can't write to /var/log/cassandra on disk), but
+    # capped: an uncapped tmpfs can grow to half the host's RAM
+    - type: tmpfs
+      target: /var/log/cassandra
+      tmpfs:
+        size: 67108864 # 64 MiB
+    ulimits:
+      memlock: -1
+      nofile: 100000
+    # Cassandra flushes memtables on SIGTERM; the 10s default means SIGKILL
+    # mid-flush and commitlog replay on every restart
+    stop_grace_period: 2m
     restart: always
     logging: *default-logging
 
@@ -70,6 +81,7 @@ services:
       KAFKA_LOG_MESSAGE_VERSION: 2.6
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
     restart: always
+    stop_grace_period: 1m
     ports:
     - 9092
     volumes:
