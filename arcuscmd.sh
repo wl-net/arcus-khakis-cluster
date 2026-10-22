@@ -338,6 +338,30 @@ function preflight_ring() {
   fi
 }
 
+function preflight_repair() {
+  # Restarting a node mid-repair kills its repair sessions and wastes the
+  # work. Catch the local repair script mid-run, and validation compactions
+  # on any local node (a repair coordinated from another DC shows up here).
+  local compose_dir="$1"
+  local repair_container node container out
+
+  repair_container=$(get_container_name "$compose_dir" "cassandra-repair")
+  if [[ -n "$repair_container" ]] && "$RUNTIME" exec "$repair_container" pgrep -f cassandra-repair.sh >/dev/null 2>&1; then
+    echo "WARNING: cassandra-repair is mid-run on this host."
+    return 1
+  fi
+
+  for node in $(get_cassandra_nodes "$compose_dir"); do
+    container=$(get_container_name "$compose_dir" "$node")
+    [[ -z "$container" ]] && continue
+    out=$("$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" compactionstats 2>/dev/null || true)
+    if echo "$out" | grep -qi 'validation'; then
+      echo "WARNING: $node has an active repair (validation compaction running)."
+      return 1
+    fi
+  done
+}
+
 function deploy() {
   local pull=false
   local force=false
@@ -380,9 +404,10 @@ function deploy() {
     local healthy=true
     check || healthy=false
     preflight_ring "$compose_dir" || healthy=false
+    preflight_repair "$compose_dir" || healthy=false
     if [[ "$healthy" != true ]]; then
       echo
-      read -r -p "Cluster is not fully healthy. Deploy anyway? [y/N] " confirm
+      read -r -p "Cluster is not fully healthy or a repair is running. Deploy anyway? [y/N] " confirm
       if [[ ! "$confirm" =~ ^[Yy] ]]; then
         echo "Aborted. (--force skips the pre-flight check)"
         exit 1
