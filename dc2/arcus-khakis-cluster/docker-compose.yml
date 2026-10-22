@@ -1,6 +1,6 @@
 services:
   cassandra-0:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:latest
+    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
     environment:
     - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
@@ -30,7 +30,7 @@ services:
       options:
         max-size: 50m
   cassandra-1:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:latest
+    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
     environment:
     - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
@@ -60,7 +60,7 @@ services:
       options:
         max-size: 50m
   cassandra-2:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:latest
+    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/cassandra:2026.10.2
     environment:
     - CASSANDRA_SEEDS=192.168.1.10,cassandra-0
     - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
@@ -115,7 +115,7 @@ services:
       options:
         max-size: 50m
   kafka-0:
-    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:latest
+    image: us-west1-docker.pkg.dev/arcus-238802/arcus-prod/arcus/kafka:2026.10.2
     environment:
       ZOOKEEPER: zookeeper-0:2181
       ZOOKEEPEROPS: zookeeper-0:2181
