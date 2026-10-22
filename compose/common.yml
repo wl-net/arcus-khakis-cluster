@@ -42,6 +42,9 @@ services:
     - 2181
     volumes:
     - zookeeper-0:/data
+    # The image's txn logs live in /datalog; without a named volume they
+    # land on an anonymous one that 'compose down' discards
+    - zookeeper-0-datalog:/datalog
     restart: always
     logging: *default-logging
 

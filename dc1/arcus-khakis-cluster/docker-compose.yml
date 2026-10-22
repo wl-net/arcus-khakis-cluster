@@ -74,6 +74,7 @@ volumes:
   cassandra-storage-1:
   cassandra-storage-2:
   zookeeper-0:
+  zookeeper-0-datalog:
   kafka-0:
 
 networks:

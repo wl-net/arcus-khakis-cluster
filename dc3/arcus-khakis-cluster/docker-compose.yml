@@ -11,6 +11,7 @@ services:
 
 volumes:
   zookeeper-0:
+  zookeeper-0-datalog:
 networks:
   arcus:
     driver: macvlan

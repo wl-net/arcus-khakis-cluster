@@ -278,24 +278,35 @@ function wait_for_node() {
 
 function wait_for_running() {
   local compose_dir="$1" svc="$2"
-  local elapsed=0 container status
+  local elapsed=0 container inspect_out status restarts consecutive=0
 
   echo "  Waiting for $svc to be running..."
   while [[ $elapsed -lt 60 ]]; do
     sleep 5
     elapsed=$((elapsed + 5))
     container=$(get_container_name "$compose_dir" "$svc")
-    [[ -z "$container" ]] && continue
-    status=$("$RUNTIME" inspect -f '{{.State.Status}}' "$container" 2>/dev/null)
-    # Require a second consecutive running check so a crash-looping
-    # container isn't caught in a transient 'running' state
-    if [[ "$status" == "running" && $elapsed -ge 10 ]]; then
-      echo "  $svc is running after ${elapsed}s"
-      return 0
+    if [[ -z "$container" ]]; then
+      consecutive=0
+      continue
+    fi
+    inspect_out=$("$RUNTIME" inspect -f '{{.State.Status}} {{.RestartCount}}' "$container" 2>/dev/null || true)
+    status=${inspect_out% *}
+    restarts=${inspect_out#* }
+    # Require two consecutive running samples with no restarts: a
+    # crash-looping container is transiently 'running' and its
+    # RestartCount climbs
+    if [[ "$status" == "running" && "$restarts" == "0" ]]; then
+      consecutive=$((consecutive + 1))
+      if [[ $consecutive -ge 2 ]]; then
+        echo "  $svc is running after ${elapsed}s"
+        return 0
+      fi
+    else
+      consecutive=0
     fi
   done
 
-  echo "  WARNING: $svc is not running after 60s (status: ${status:-not found})"
+  echo "  WARNING: $svc is not running after 60s (status: ${status:-not found}, restarts: ${restarts:-?})"
   return 1
 }
 
@@ -344,7 +355,9 @@ function deploy() {
 
   require_compose
   local compose_dir
-  compose_dir=$(find_compose_dir)
+  # Verify the cached DC against running containers: deploying the wrong
+  # DC's config onto a host would re-IP every service.
+  compose_dir=$(find_compose_dir true)
   echo "Using compose directory: $compose_dir"
 
   # If specific services given, just restart them without health checks

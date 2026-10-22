@@ -76,12 +76,15 @@ for CONTAINER in $CONTAINERS; do
   fi
 done
 
-log "Pruning backups older than ${BACKUP_RETAIN_DAYS} days..."
-find "$BACKUP_DIR" -maxdepth 1 \( -name '*.tar.gz' -o -name 'schema-*.cql' \) -mtime +"$BACKUP_RETAIN_DAYS" -print -exec rm -f {} \;
-
 if [ "$FAILURES" -gt 0 ]; then
+  # Don't prune after a failed run: sustained failures would otherwise age
+  # out every remaining good backup exactly when the pipeline is broken.
+  log "Skipping retention pruning because this run had failures"
   log "Backup finished with $FAILURES failure(s)"
   exit 1
 fi
+
+log "Pruning backups older than ${BACKUP_RETAIN_DAYS} days..."
+find "$BACKUP_DIR" -maxdepth 1 \( -name '*.tar.gz' -o -name 'schema-*.cql' \) -mtime +"$BACKUP_RETAIN_DAYS" -print -exec rm -f {} \;
 
 log "Backup complete: $TAG"
