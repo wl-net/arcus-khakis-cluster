@@ -57,8 +57,10 @@ Deploy:
   apply               Bring up all services (docker-compose up -d)
   deploy [svc...]     Rolling deploy of changed services (Cassandra one node at a time);
                       unchanged services are skipped. Named services are always
-                      recreated, without health checks.
-                        --pull  Pull images before restarting
+                      recreated, without health checks. Runs a pre-flight health
+                      check first and prompts if the cluster is unhealthy.
+                        --pull   Pull images before restarting
+                        --force  Skip the pre-flight health check
 
 Operations:
   logs <svc>          Tail logs for a service
@@ -282,13 +284,33 @@ function apply() {
   echo "All services started."
 }
 
+function preflight_ring() {
+  # Scan the whole ring (all DCs) from a local node: a DN node anywhere
+  # means a rolling restart here could drop quorum.
+  local compose_dir="$1"
+  local node container bad
+  node=$(get_cassandra_nodes "$compose_dir" | head -1)
+  [[ -z "$node" ]] && return 0
+  container=$(get_container_name "$compose_dir" "$node")
+  [[ -z "$container" ]] && return 0  # nothing running yet, nothing to protect
+  bad=$("$RUNTIME" exec "$container" "$NODETOOL" -h "::ffff:127.0.0.1" status 2>/dev/null | grep -E '^[UD][NLJM] ' | grep -v '^UN ' || true)
+  if [[ -n "$bad" ]]; then
+    echo "WARNING: Cassandra ring has nodes that are not UN:"
+    echo "$bad"
+    return 1
+  fi
+}
+
 function deploy() {
   local pull=false
+  local force=false
   local services=()
 
   for arg in "$@"; do
     if [[ "$arg" == "--pull" ]]; then
       pull=true
+    elif [[ "$arg" == "--force" ]]; then
+      force=true
     else
       services+=("$arg")
     fi
@@ -309,6 +331,25 @@ function deploy() {
       $COMPOSE_CMD -f "$compose_dir/docker-compose.yml" up -d --no-deps --force-recreate "$svc"
     done
     return
+  fi
+
+  # Pre-flight: don't start a rolling deploy on an unhealthy cluster
+  # without the operator confirming. --force skips the check (e.g. when
+  # deploying precisely to fix the unhealthy service).
+  if [[ "$force" != true ]]; then
+    echo "Running pre-flight health check..."
+    local healthy=true
+    check || healthy=false
+    preflight_ring "$compose_dir" || healthy=false
+    if [[ "$healthy" != true ]]; then
+      echo
+      read -r -p "Cluster is not fully healthy. Deploy anyway? [y/N] " confirm
+      if [[ ! "$confirm" =~ ^[Yy] ]]; then
+        echo "Aborted. (--force skips the pre-flight check)"
+        exit 1
+      fi
+    fi
+    echo
   fi
 
   # Default: rolling deploy of all services. Cassandra nodes go first, one
