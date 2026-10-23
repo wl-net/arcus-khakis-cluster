@@ -1,6 +1,12 @@
 # Shared service definitions for all DCs. The per-DC compose files extend
 # these and override only what differs between DCs: addresses, identities,
 # seeds, and schedules. This file is not a valid project on its own.
+#
+# mem_limit caps resident memory so one runaway container can't take the
+# host down (DC hosts have ~4.8 GiB and run three Cassandra nodes plus
+# Kafka). Limits are caps, not reservations: they sum past physical RAM on
+# purpose. Swap is left available — the hosts run overcommitted and
+# forbidding it would trade thrash for host-level OOM kills.
 x-logging: &default-logging
   options:
     max-size: 50m
@@ -31,6 +37,8 @@ services:
     # Cassandra flushes memtables on SIGTERM; the 10s default means SIGKILL
     # mid-flush and commitlog replay on every restart
     stop_grace_period: 2m
+    # Observed ~1.2 GiB (768M heap + off-heap); headroom for repair spikes
+    mem_limit: 1792m
     restart: always
     logging: *default-logging
 
@@ -41,8 +49,12 @@ services:
       # The image default (2 ticks = 4s) is LAN tuning: any 4s blip on a VPN
       # tunnel drops the follower and forces an election
       ZOO_SYNC_LIMIT: 10
+      # Image default heap is 1000m, which would outgrow mem_limit and get
+      # the JVM OOM-killed; observed usage is ~60 MiB
+      ZK_SERVER_HEAP: 256
     ports:
     - 2181
+    mem_limit: 512m
     volumes:
     - zookeeper-0:/data
     # The image's txn logs live in /datalog; without a named volume they
@@ -57,6 +69,7 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock
     - ../repair:/repair:ro
     entrypoint: /repair/entrypoint.sh
+    mem_limit: 256m
     restart: always
     logging: *default-logging
 
@@ -67,6 +80,7 @@ services:
     - ../backup:/backup:ro
     - /var/backups/arcus-khakis-cluster:/backups
     entrypoint: /backup/entrypoint.sh
+    mem_limit: 256m
     restart: always
     logging: *default-logging
 
@@ -91,6 +105,8 @@ services:
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
     restart: always
     stop_grace_period: 1m
+    # Observed ~420 MiB with the 512M heap; the rest is page cache
+    mem_limit: 1g
     ports:
     - 9092
     volumes:
