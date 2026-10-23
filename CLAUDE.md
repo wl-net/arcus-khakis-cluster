@@ -54,7 +54,7 @@ CLI tool for managing the cluster. Detects docker vs podman automatically.
 - `check` — Verify all containers are running and reachable (Cassandra UN, Zookeeper mode, etc.)
 - `update` — Git pull with fast-forward, show changes
 - `apply` — Bring up all services (`docker-compose up -d`), verifies cached DC is still correct
-- `deploy` — Rolling deploy of all services; only recreates containers whose image/config changed (Cassandra one node at a time waiting for UN, then each other service with a running check). Runs a pre-flight health check (local services + full-ring `nodetool status` + active-repair detection) and prompts before deploying onto an unhealthy or mid-repair cluster; `--force` skips it. After a deploy no repair is needed unless a node was down longer than the ~3h hint window (then run `repair`)
+- `deploy` — Rolling deploy of all services; only recreates containers whose image/config changed (Cassandra one node at a time waiting for UN, then each other service with a running check). Runs a pre-flight health check (local services + full-ring `nodetool status` + active-repair detection + peer-DC quorum: other ZK ensemble members serving, both Kafka brokers registered) and prompts before deploying onto an unhealthy, mid-repair, or already-degraded cluster; `--force` skips it. After a deploy no repair is needed unless a node was down longer than the ~3h hint window (then run `repair`)
 - `deploy --pull` — Same but pulls images first
 - `deploy <svc>` — Deploy a specific service without health checks (always recreates, even if unchanged)
 - `logs <svc>` — Tail logs for a service

@@ -62,7 +62,9 @@ Deploy:
   deploy [svc...]     Rolling deploy of changed services (Cassandra one node at a time);
                       unchanged services are skipped. Named services are always
                       recreated, without health checks. Runs a pre-flight health
-                      check first and prompts if the cluster is unhealthy.
+                      check first and prompts if the cluster is unhealthy, a
+                      repair is running, or a peer DC is already down (so a
+                      restart here would drop ZooKeeper/Kafka redundancy).
                         --pull   Pull images before restarting
                         --force  Skip the pre-flight health check
 
@@ -362,6 +364,53 @@ function preflight_repair() {
   done
 }
 
+function preflight_quorum() {
+  # A rolling deploy restarts the local ZooKeeper and Kafka. If a peer DC
+  # is already down, that restart removes the last redundancy: ZooKeeper
+  # drops below ensemble quorum (3 members tolerate one loss, not two) and
+  # Kafka loses its only live broker (2 brokers, offsets RF=2). Probe the
+  # peers from the local ZooKeeper container before touching anything.
+  local compose_dir="$1"
+  local degraded=0
+
+  local zk_container my_id servers entry id ip
+  zk_container=$(get_container_name "$compose_dir" "zookeeper-0")
+  [[ -z "$zk_container" ]] && return 0  # nothing running yet, nothing to protect
+  my_id=$("$RUNTIME" exec "$zk_container" printenv ZOO_MY_ID 2>/dev/null || true)
+  servers=$("$RUNTIME" exec "$zk_container" printenv ZOO_SERVERS 2>/dev/null || true)
+  for entry in $servers; do
+    # Entries look like server.<id>=<ip>:2888:3888;2181
+    id=${entry#server.}; id=${id%%=*}
+    ip=${entry#*=}; ip=${ip%%:*}
+    [[ -z "$id" || -z "$ip" || "$id" == "$my_id" ]] && continue
+    # 'srvr' over bash /dev/tcp: the zookeeper image has no nc, and the
+    # image's default 4lw whitelist (srvr,mntr,conf,ruok) permits srvr
+    # shellcheck disable=SC2016  # $1 is for the inner bash, passed via "$ip"
+    if ! "$RUNTIME" exec "$zk_container" timeout 5 bash -c \
+        'exec 3<>"/dev/tcp/$1/2181" && echo srvr >&3 && grep -q "^Mode:" <&3' _ "$ip" 2>/dev/null; then
+      echo "WARNING: ZooKeeper ensemble member $id ($ip) is not serving."
+      echo "         Restarting the local member would drop the ensemble below quorum."
+      degraded=1
+    fi
+  done
+
+  local kafka_container count
+  kafka_container=$(get_container_name "$compose_dir" "kafka-0")
+  if [[ -n "$kafka_container" ]]; then
+    # Brokers hold ephemeral znodes under /brokers/ids; fewer than two
+    # means the peer DC's broker (or ours) is already gone
+    count=$("$RUNTIME" exec "$zk_container" timeout 10 zkCli.sh -server localhost:2181 ls /brokers/ids 2>/dev/null \
+      | grep -o '\[[0-9][0-9, ]*\]' | tail -1 | tr -c '0-9' ' ' | wc -w || true)
+    if [[ "${count:-0}" -lt 2 ]]; then
+      echo "WARNING: ${count:-0} of 2 Kafka brokers registered in ZooKeeper."
+      echo "         Restarting the local broker could leave none serving."
+      degraded=1
+    fi
+  fi
+
+  return "$degraded"
+}
+
 function deploy() {
   local pull=false
   local force=false
@@ -405,6 +454,7 @@ function deploy() {
     check || healthy=false
     preflight_ring "$compose_dir" || healthy=false
     preflight_repair "$compose_dir" || healthy=false
+    preflight_quorum "$compose_dir" || healthy=false
     if [[ "$healthy" != true ]]; then
       echo
       read -r -p "Cluster is not fully healthy or a repair is running. Deploy anyway? [y/N] " confirm
