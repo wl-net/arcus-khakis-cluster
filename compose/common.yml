@@ -10,6 +10,9 @@
 x-logging: &default-logging
   options:
     max-size: 50m
+    # Keep rotated files: a busy hour of INFO logs can rotate a single file
+    # past an incident window before anyone looks (2026-10-24 ZK expiry).
+    max-file: "3"
 
 services:
   cassandra:
